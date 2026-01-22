@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2025-01-22)
 ## Current Position
 
 Phase: 1 of 4 (Foundation & Validation)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-22 — Completed 01-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase 1 complete
+Last activity: 2026-01-22 — Completed 01-02-PLAN.md
 
-Progress: [█░░░░░░░░░] 10% (1/10 total plans)
+Progress: [██░░░░░░░░] 20% (2/10 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 1.4 min
-- Total execution time: 0.02 hours
+- Total plans completed: 2
+- Average duration: 2.7 min
+- Total execution time: 0.09 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 - Foundation & Validation | 1/2 | 1.4 min | 1.4 min |
+| 1 - Foundation & Validation | 2/2 | 5.4 min | 2.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (1.4min)
-- Trend: First plan - baseline established
+- Last 5 plans: 01-01 (1.4min), 01-02 (4.0min)
+- Trend: Phase 1 complete, steady velocity
 
 *Updated after each plan completion*
 
@@ -53,6 +53,14 @@ Recent decisions affecting current work:
 - ethers.js v5.7.2 over v6 for better CDN availability
 - bs58 v6.0.0 for Solana validation (no official @solana/addresses CDN)
 
+**From Plan 01-02:**
+- Layered validation approach: JSON parse → version → payments → fields → addresses → semantics
+- Error vs warning separation: valid=true if no errors (warnings don't block)
+- All-lowercase EVM addresses valid with warning (no checksum protection)
+- Reject scientific notation in amounts for clarity and consistency
+- Cross-field validation for chain/address format mismatches
+- Field path format: payments[0].address for precise error location
+
 ### Pending Todos
 
 None yet.
@@ -66,7 +74,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-22T16:25:38Z
-Stopped at: Completed 01-01-PLAN.md (Foundation Setup)
+Last session: 2026-01-22T16:32:40Z
+Stopped at: Completed 01-02-PLAN.md (Validation Engine)
 Resume file: None
-Next: Execute 01-02-PLAN.md (Validation Engine)
+Next: Phase 1 complete - ready for Phase 2 (Results Display)
