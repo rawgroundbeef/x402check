@@ -33,10 +33,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   7. Tool validates minAmount is positive decimal
   8. Tool validates optional fields when present (facilitator.url is HTTPS, maxAmount >= minAmount)
   9. Tool distinguishes errors (blocking) from warnings (recommendations)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 01-01-PLAN.md — Project setup with HTML scaffold and chain configuration
+- [ ] 01-02-PLAN.md — Core validation engine with all VAL requirements
 
 ### Phase 2: Input & Proxy
 **Goal**: Users can submit configs via URL or direct JSON paste
@@ -91,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Validation | 0/TBD | Not started | - |
+| 1. Foundation & Validation | 0/2 | Planned | - |
 | 2. Input & Proxy | 0/TBD | Not started | - |
 | 3. Results Display | 0/TBD | Not started | - |
 | 4. Polish | 0/TBD | Not started | - |
