@@ -12,7 +12,7 @@ Transform x402 payment configuration validation from manual specification checki
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Validation** - Project setup + core validation engine
+- [x] **Phase 1: Foundation & Validation** - Project setup + core validation engine
 - [ ] **Phase 2: Input & Proxy** - URL/JSON input modes + CORS proxy
 - [ ] **Phase 3: Results Display** - Error messages, success states, formatting
 - [ ] **Phase 4: Polish** - Examples, mobile responsiveness, final hardening
@@ -36,8 +36,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project setup with HTML scaffold and chain configuration
-- [ ] 01-02-PLAN.md — Core validation engine with all VAL requirements
+- [x] 01-01-PLAN.md — Project setup with HTML scaffold and chain configuration
+- [x] 01-02-PLAN.md — Core validation engine with all VAL requirements
 
 ### Phase 2: Input & Proxy
 **Goal**: Users can submit configs via URL or direct JSON paste
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Validation | 0/2 | Planned | - |
+| 1. Foundation & Validation | 2/2 | ✓ Complete | 2026-01-22 |
 | 2. Input & Proxy | 0/TBD | Not started | - |
 | 3. Results Display | 0/TBD | Not started | - |
 | 4. Polish | 0/TBD | Not started | - |
