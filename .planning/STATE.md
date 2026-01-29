@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 6 of 10 (Types, Detection, and Normalization)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-29 — Completed 06-01-PLAN.md
+Last activity: 2026-01-29 — Completed 06-03-PLAN.md
 
-Progress: [██░░░░░░░░] 17% (2/12 plans across 6 phases)
+Progress: [███░░░░░░░] 25% (3/12 plans across 6 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (3 v1.0 + 2 v2.0)
-- Average duration: 2.9 min
-- Total execution time: 0.23 hours
+- Total plans completed: 6 (3 v1.0 + 3 v2.0)
+- Average duration: 2.8 min
+- Total execution time: 0.28 hours
 
 **By Phase:**
 
@@ -30,7 +30,7 @@ Progress: [██░░░░░░░░] 17% (2/12 plans across 6 phases)
 | 1 - Foundation & Validation | 2/2 | 5.4 min | 2.7 min |
 | 2 - Input & Proxy | 1/2 | 4.0 min | 4.0 min |
 | 5 - Repository Restructuring | 1/1 | 3.0 min | 3.0 min |
-| 6 - Types, Detection, Normalization | 1/3 | 2.0 min | 2.0 min |
+| 6 - Types, Detection, Normalization | 2/3 | 4.8 min | 2.4 min |
 
 *Updated after each plan completion*
 
@@ -51,6 +51,9 @@ Recent decisions affecting current work:
 | Use tsdown (not tsup) | Roadmap | Better UMD support, actively maintained |
 | 27 error codes with satisfies Record<> enforcement | 06-01 | Type-safe message mapping |
 | prop?: T \| undefined for optional fields | 06-01 | exactOptionalPropertyTypes compliance |
+| Store EVM addresses in lowercase for case-insensitive lookup | 06-03 | Asset registry implementation |
+| Separate isValidCaip2 from isKnownNetwork | 06-03 | Unknown-but-valid networks produce warnings not errors |
+| Use community convention for Aptos networks (aptos:1, aptos:2) | 06-03 | No official CAIP namespace yet |
 
 ### Pending Todos
 
@@ -64,6 +67,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 06-01-PLAN.md (Types, Error Vocabulary, Input Parsing)
+Stopped at: Completed 06-03-PLAN.md (Network and Asset Registries)
 Resume file: None
 Next: Execute 06-02-PLAN.md (Detection and Normalization)
