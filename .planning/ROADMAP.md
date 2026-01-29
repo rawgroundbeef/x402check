@@ -60,12 +60,12 @@ Plans:
   3. Calling `detect()` or `normalize()` with a JSON string input works identically to passing a parsed object
   4. Every error code constant (e.g., `MISSING_SCHEME`, `INVALID_NETWORK_FORMAT`) is exported and each has a field path format and human-readable message template
   5. The network registry maps CAIP-2 identifiers to known chains and the asset registry maps known asset addresses per network, with unknown-but-valid CAIP-2 networks producing warnings (not errors)
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 06-01: Type system, error codes, and public API signatures
-- [ ] 06-02: Format detection and normalization
-- [ ] 06-03: Network and asset registries
+- [ ] 06-01-PLAN.md -- Type system, error codes, and public API signatures
+- [ ] 06-02-PLAN.md -- Format detection and normalization
+- [ ] 06-03-PLAN.md -- Network and asset registries
 
 ### Phase 7: Crypto Vendoring and Address Validation
 **Goal**: Vendored crypto primitives are proven correct against reference test vectors, and address validation dispatches by chain type with checksum verification for EVM and byte-length validation for Solana
@@ -137,7 +137,7 @@ Phases execute in numeric order: 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 5. Repository Restructuring | v2.0 | 1/1 | Complete | 2026-01-29 |
-| 6. Types, Detection, Normalization | v2.0 | 0/3 | Not started | - |
+| 6. Types, Detection, Normalization | v2.0 | 0/3 | Planned | - |
 | 7. Crypto & Address Validation | v2.0 | 0/2 | Not started | - |
 | 8. Validation Rules & Orchestrator | v2.0 | 0/3 | Not started | - |
 | 9. Build Pipeline | v2.0 | 0/1 | Not started | - |
@@ -145,4 +145,4 @@ Phases execute in numeric order: 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-01-29 — Phase 5 complete*
+*Last updated: 2026-01-29 -- Phase 6 planned*
