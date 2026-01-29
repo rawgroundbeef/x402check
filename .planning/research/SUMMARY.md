@@ -1,320 +1,250 @@
 # Project Research Summary
 
-**Project:** x402check
-**Domain:** Developer validation tool (blockchain payment configuration validator)
-**Researched:** 2026-01-22
+**Project:** x402check v2.0 -- Spec-Compliant SDK Extraction
+**Domain:** TypeScript validation SDK (npm package for x402 PaymentRequired response validation)
+**Researched:** 2026-01-29
 **Confidence:** HIGH
 
 ## Executive Summary
 
-x402check is a web-based validator for x402 payment configurations that validates blockchain addresses, chain/asset combinations, and required fields against the x402 specification. Research reveals that expert developers build this type of tool using vanilla JavaScript with client-side validation for privacy and instant feedback, supported by a lightweight CORS proxy (Cloudflare Workers) for URL fetching. The zero-build-step approach maximizes simplicity while modern browser APIs provide all necessary functionality.
+x402check v2.0 extracts the validation logic currently embedded in a plain HTML/JS website into a standalone TypeScript npm package at `packages/x402check/`. The SDK will expose three synchronous, pure-function APIs -- `validate()`, `detect()`, and `normalize()` -- following patterns established by Zod, Ajv, and libphonenumber-js. The package will ship ESM, CJS, and browser (IIFE/UMD) bundles with zero runtime dependencies, vendoring only two crypto primitives: a ~45-line Base58 decoder for Solana address validation and a ~150-200 line keccak256 implementation (extracted from the MIT-licensed, Cure53-audited `@noble/hashes`) for EIP-55 EVM address checksum verification. The target browser bundle size is under 15KB minified.
 
-The recommended approach is a three-layer architecture: presentation (input forms, results display), validation (rule-based engine with chain-specific logic), and utility (proxy client, chain helpers). Core technologies are vanilla JavaScript (ES2022+), HTML5, classless CSS (Pico), and Cloudflare Workers. This stack avoids framework complexity while maintaining professional UX through semantic HTML and progressive enhancement patterns.
+The recommended build toolchain is **tsdown** (not tsup). Stack research revealed that tsup is no longer actively maintained and recommends migration to tsdown, which provides native UMD format support (tsup only supports IIFE), TypeScript 5.9 compatibility (tsup has known DTS failures), and faster Rust-based builds. tsdown's API is tsup-compatible, making the migration path straightforward. Tests use vitest 4.x (native TS, no Babel), and the monorepo uses npm workspaces -- the simplest option for a 2-package repo. The architecture is a synchronous, stateless, layered validation pipeline where each rule is a pure function returning `ValidationIssue[]`. Website integration replaces ~810KB of CDN scripts (ethers.js alone) with a single ~15KB IIFE bundle.
 
-The critical risk is address validation without checksum verification, which creates false positives that could lead to fund loss in production use. Secondary risks include CORS proxy error swallowing (debugging becomes impossible), vanilla JS state spaghetti (unmaintainable without structure), and async race conditions (stale validation results). All are preventable through architecture decisions in Phase 0 and validation patterns established in Phase 1.
+The primary risks are concentrated in crypto vendoring: confusing Keccak-256 with SHA-3 (different padding, completely different outputs) and mishandling Base58 leading-zero bytes. Both produce silent corruption -- addresses validate incorrectly with no obvious error. Secondary risks involve TypeScript package publishing (the `exports` field in package.json is notoriously fragile across resolution modes) and the website integration (the SDK's result shape differs from the current `validator.js` in 8+ field names). All critical risks have well-documented prevention strategies and deterministic test vectors.
 
 ## Key Findings
 
-### Recommended Stack
+### 1. Use tsdown, Not tsup
 
-The research strongly supports a **no-framework, zero-build-step approach** using vanilla JavaScript. Modern browser APIs (fetch, querySelector, addEventListener) now provide functionality that previously required jQuery or frameworks. This eliminates build complexity, reduces page weight, and enables instant deployment.
+STACK.md's most impactful finding: tsup is unmaintained and recommends migration to tsdown. tsdown provides native UMD support (the PRD requirement), TypeScript 5.9 DTS compatibility, and a tsup-compatible API. The ARCHITECTURE.md file still references tsup in its code examples -- this should be treated as superseded by the STACK.md recommendation. **Fallback:** If tsdown causes issues, tsup 8.5.1 works for ESM+CJS but requires IIFE (not UMD) for browser and pinning TypeScript to 5.8.x.
 
-**Core technologies:**
-- **Vanilla JavaScript (ES2022+)**: Client-side validation logic — native browser APIs handle everything needed, zero build step
-- **HTML5**: Page structure — semantic HTML provides accessibility and form validation attributes built-in
-- **Pico CSS (~10KB)**: Styling — classless CSS framework provides professional design with minimal markup
-- **Cloudflare Workers**: CORS proxy — free tier (100k req/day), edge deployment, <1ms cold start for fetching facilitator URLs
+### 2. Keccak-256 is NOT SHA-3
 
-**Critical version requirements:**
-- Node.js 16.17.0+ for Wrangler CLI (Worker deployment)
-- Wrangler 3.x for latest Workers SDK
-- Modern browsers only (Chrome/Firefox/Safari/Edge last 2 years) — no IE11 support needed
+The highest-risk implementation detail. Ethereum uses pre-NIST Keccak-256, not the finalized SHA-3-256 standard. They produce completely different outputs. PITFALLS.md provides a canary test: hash an empty string and assert the result equals `c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470`. If it equals `a7ffc6f...`, the implementation is fatally wrong. STACK.md recommends extracting from `@noble/hashes` (MIT, audited); ARCHITECTURE.md suggests bundling it as a devDependency and letting the build tool tree-shake it.
 
-**Key insight from research:** "Vanilla JS is making a comeback in 2025 for developer tools because native APIs are sufficient, zero build complexity, faster development, better performance (no framework overhead), and easier debugging (no source maps)." This matches the project constraint of maximum simplicity.
+### 3. Error Codes Are the Foundation
 
-### Expected Features
+FEATURES.md identifies error codes (TS-2) as the single foundational dependency -- every other feature references them. The SDK should use `SCREAMING_SNAKE_CASE` string constants via `as const` objects (not TypeScript enums, which don't tree-shake). Machine-readable codes like `MISSING_SCHEME`, `INVALID_NETWORK_FORMAT`, and `BAD_EVM_CHECKSUM` are the stable API contract; human messages are convenience.
 
-Research into JSON validators, schema checkers, and linting tools reveals clear feature expectations.
+### 4. Layered Validation Pipeline, Not Schema Library
 
-**Must have (table stakes):**
-- Real-time validation — users expect instant feedback as they type or paste
-- Clear error messages with line numbers — pinpointing exact location is essential for fixing
-- Multiple input methods — paste text, enter URL (file upload deferred to v2)
-- Copy to clipboard — standard UX for moving validated content elsewhere
-- Format/beautify output — make minified or messy input readable
-- Success confirmation — explicit "valid" message when no errors found
-- Mobile responsiveness — developers debug on phones/tablets too
+ARCHITECTURE.md defines a 6-level pipeline (Parse -> Detect -> Normalize -> Structure -> Fields -> Network) with short-circuit on structural errors. FEATURES.md confirms this pattern as table stakes (TS-8). Both documents strongly recommend against Zod/Ajv -- they add 13-50KB for functionality that is worse than hand-written rules for domain-specific validation with fix suggestions.
 
-**Should have (competitive differentiators):**
-- Example templates/presets — reduces friction for new users
-- Context-aware validation — domain-specific x402 rules beyond syntax (address formats, chain/asset combos)
-- Error vs warning distinction — not all issues are blocking
-- Show raw JSON toggle — users want both formatted and original versions
-- Privacy-first (client-side only) — data never leaves browser
-- Shareable validation URLs — allows sharing states with teammates (v1.x consideration)
+### 5. Fix Suggestions Are the Primary Differentiator
 
-**Defer (v2+):**
-- Batch validation — out of scope, requires significant UX/architecture changes
-- User accounts / saved validations — adds complexity, contradicts privacy-first
-- Live endpoint testing — requires backend, out of scope for config validator
-- Custom validation rules — turns simple tool into complex rules engine
+FEATURES.md identifies `fix` suggestions (DF-1) as the SDK's core UX advantage over generic validators. When the SDK detects `network: "base"`, it should say `"Use 'eip155:8453' instead of 'base'"`. When it detects a bad EVM checksum, it should provide the correctly checksummed address. This requires the chain registry and address validation to work together.
 
-### Architecture Approach
+### 6. Named Exports Only -- No Default Export
 
-The recommended architecture follows **unidirectional data flow** with clear component boundaries, even without a framework. Input flows forward through parsing → validation → display with no component modifying upstream state.
+PITFALLS.md warns that `export default` in the entry point breaks IIFE global access patterns. The SDK must use only named exports: `export { validate, detect, normalize }`. With IIFE format and `globalName: 'x402Validate'`, these become `window.x402Validate.validate`, `window.x402Validate.detect`, etc.
+
+### 7. Website Integration Has 8+ Breaking Field Changes
+
+The SDK result shape differs from the current `validator.js` in at least 8 fields: `detectedFormat` -> `version`, `normalized.payments` -> `normalized.accepts`, `chain` -> `network` (CAIP-2), `address` -> `payTo`, `minAmount` -> `amount`, format value `'flat'` -> `'flat-legacy'`, and removal of `_normalizedAmount`. ARCHITECTURE.md recommends a thin adapter function in `input.js` to bridge the gap.
+
+### 8. Solana Validation Has a Hard Ceiling
+
+Solana addresses have no checksum. Validation can only confirm valid Base58 alphabet + 32-byte decoded length. Typo detection is impossible. Do not over-invest here; focus effort on making EVM checksum validation excellent.
+
+## Stack Summary
+
+**New additions (SDK package devDependencies only):**
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| tsdown | ^0.20.1 | Build: ESM + CJS + UMD + DTS |
+| vitest | ^4.0.17 | Test runner with coverage |
+| typescript | ^5.8.0 | Type checking |
+| @vitest/coverage-v8 | ^4.0.17 | Coverage reporting |
+
+**Runtime dependencies:** None. Zero. Hard requirement.
+
+**Vendored code:**
+- Base58 decoder (~45 lines, written from scratch)
+- Keccak-256 (~150-200 lines, extracted from `@noble/hashes` MIT)
+- EIP-55 checksum (~15 lines on top of keccak)
+
+**Monorepo:** npm workspaces (`packages/*`), root `package.json` with `private: true`
+
+## Feature Priority
+
+**Table stakes (must ship in v1.0):**
+- `validate()` returning structured `{ valid, errors, warnings, normalized }`
+- `detect()` for format identification (v2, v1, flat-legacy, unknown)
+- `normalize()` for any-format-to-canonical-v2 conversion
+- Machine-readable error codes with field paths
+- Human-readable messages with fix suggestions
+- Errors vs warnings severity distinction
+- Layered validation (structure before fields before network)
+- TypeScript types, string + object input support
+
+**Should have (ship in v1.0 if possible, otherwise fast follow):**
+- Strict mode (warnings become errors)
+- Extensible chain validation registry (CAIP-2 namespace dispatch)
+- Normalized result included in validate() output
+- Known asset registry per network
+
+**Anti-features (never build):**
+- Network calls, async validation, mutable state
+- Payment construction or signing
+- Schema libraries (Zod/Ajv) as internal engine
+- Per-rule configurable severity
+- Custom error message templates / i18n
+
+## Architecture Approach
+
+The SDK is a **synchronous, stateless, layered validation pipeline**. Input enters as `unknown`, gets parsed (JSON if string), detected (format identification), normalized (to canonical v2 shape), then validated through 5 rule layers. Each rule is a pure function: `(entry, path) => ValidationIssue[]`. The orchestrator (`validate.ts`) calls rules sequentially and aggregates results.
 
 **Major components:**
-1. **Input Handler** — routes URL requests to proxy, parses direct JSON input
-2. **Validation Engine** — coordinates validation rules, aggregates results using rule registry pattern
-3. **Display Results** — renders pass/fail/warnings with user-friendly formatting
-4. **Proxy Client** — fetches URLs via Cloudflare Worker, handles CORS and errors
-5. **Chain Utilities** — provides chain-specific helpers (address formats, asset lists)
 
-**Architecture patterns identified:**
-- **Unidirectional data flow**: Easy to reason about, independently testable stages
-- **Rule registry pattern**: Validation rules register with engine, easy to add/remove without modifying core
-- **Chain of responsibility**: Critical rules (required fields, structure) run first; early exit on failures
-- **Proxy wrapper pattern**: Centralized error handling for Cloudflare Worker fetch calls
+1. **Public API** (`index.ts`) -- Re-exports `validate`, `detect`, `normalize` as named exports
+2. **Orchestrator** (`validate.ts`) -- Runs the 6-level pipeline, aggregates issues, applies strict mode
+3. **Detector** (`detect.ts`) -- Identifies v2/v1/flat-legacy/unknown from structural markers
+4. **Normalizer** (`normalize.ts`) -- Maps any recognized format to canonical v2 shape
+5. **Rule modules** (`rules/*.ts`) -- Structure, requirements, network, address, amount validators
+6. **Registries** (`networks.ts`, `assets.ts`) -- CAIP-2 network data, known asset addresses
+7. **Crypto primitives** (`vendor/base58.ts`, `vendor/keccak256.ts`) -- Vendored, zero-dep
 
-**Key insight from research:** "Separate concerns: state → rendering → DOM updates. Use modern patterns like Proxy observers for reactive state (2026 standard). Create clear component boundaries even without framework." This prevents the vanilla JS state spaghetti anti-pattern.
+**Key architectural decisions:**
+- No Chain of Responsibility pattern -- fixed pipeline order is simpler and more debuggable
+- No rule registry abstraction -- direct function calls in validate.ts
+- No async -- all validation is pure computation
+- Address validation dispatches by CAIP-2 namespace (`evm`, `solana`), not by specific chain ID
 
-### Critical Pitfalls
+## Critical Pitfalls (Top 5)
 
-Research into validation tools, vanilla JS patterns, and blockchain address validation identified eight critical pitfalls. Top 5 for roadmap consideration:
+1. **Keccak-256 vs SHA-3 confusion** -- Use the function explicitly named `keccak256` or `keccak_256`, never `sha3()`. Add an empty-string canary test in CI. Extract from `@noble/hashes` which provides correct Keccak. *Phase: Crypto vendoring.*
 
-1. **Address Checksum Blindness** — Tool accepts addresses without checksum validation, creating false positives that could cause fund loss. Each blockchain has unique checksums: Ethereum uses EIP-55 (case-sensitive hex via Keccak-256), Bitcoin uses Base58Check or Bech32, Solana uses Base58 with length validation. Prevention: Use `multicoin-address-validator` library or implement chain-specific checksum logic. This is NOT optional.
+2. **Base58 leading-zero byte loss** -- Each leading `1` in Base58 represents a `0x00` byte that pure BigInt division loses. Count leading `1`s and prepend zero bytes. Test with all-`1` addresses. *Phase: Crypto vendoring.*
 
-2. **CORS Proxy Error Swallowing** — Worker catches errors but returns generic 500s without context. Users can't debug facilitator API issues. Prevention: Preserve original error status codes and messages, distinguish between network/CORS/API/validation errors, return structured error responses with type and details.
+3. **Build tool IIFE export behavior** -- Use only named exports (no `export default`). Test that `window.x402Validate.validate` is a function in a browser environment after building. *Phase: Build pipeline.*
 
-3. **Vanilla JS State Spaghetti** — Without structure, state devolves into DOM manipulation mixed with business logic. Global variables proliferate. Prevention: Establish state management pattern (Proxy-based reactivity) from day one, separate state → rendering → DOM updates, create component boundaries even without framework.
+4. **package.json `exports` types resolution** -- Put `"types"` FIRST in each conditional export block. Generate both `.d.ts` and `.d.mts`. Run `@arethetypeswrong/cli --pack .` before publishing. *Phase: Package config.*
 
-4. **Async Race Conditions** — User changes input before first validation completes, results display wrong status. Prevention: Use AbortController to cancel in-flight requests, implement debouncing (500ms), store request IDs to ignore stale responses.
-
-5. **Cryptic Error Messages** — Technical jargon alienates users, errors don't specify which field or how to fix. Prevention: Transform technical errors into user-friendly messages, be specific ("Ethereum address checksum failed" not "Invalid address"), include fix suggestions, highlight problematic field in UI.
-
-**Research finding:** "Client-side validation only (trust without verification)" appears safe for a read-only tool but creates security holes. Even developer tools need dual validation (client for UX, Worker for accuracy) to prevent bypass via browser DevTools.
+5. **Website integration shape mismatch** -- Map all 8+ field name changes before starting integration. Use an adapter function or rewrite display code to use new spec-correct names. *Phase: Website integration.*
 
 ## Implications for Roadmap
 
-Based on research, the natural phase structure follows the data flow and addresses pitfalls progressively.
+Based on research, suggested phase structure:
 
-### Suggested Phases
+### Phase 0: Repository Restructuring
+**Rationale:** Must happen first -- monorepo structure is a prerequisite for all SDK work.
+**Delivers:** Root `package.json` with workspaces config, `packages/x402check/` directory skeleton, initial `package.json` + `tsconfig.json` + build config.
+**Addresses:** Monorepo setup (STACK), directory structure (ARCHITECTURE)
+**Avoids:** Pitfall 8 (workspace breaks website serving) -- test `index.html` still loads after restructuring. Pitfall 12 (name squatting) -- verify `npm view x402check` before proceeding.
+**Effort:** ~0.5 days
 
-#### Phase 0: Foundation & Architecture
-**Rationale:** Must establish architectural patterns before writing features to prevent state spaghetti anti-pattern. Research shows vanilla JS projects that skip this step become unmaintainable by Phase 3.
+### Phase 1: Types, Detection, and Normalization
+**Rationale:** Types are the foundation everything else builds on. Detection and normalization have no crypto dependencies and establish the data contracts that all validation rules consume. Error codes must exist before any rule can reference them.
+**Delivers:** `types.ts`, `detect.ts`, `normalize.ts`, `networks.ts`, `assets.ts` with full test coverage.
+**Addresses:** TS-2 (error codes), TS-5 (detect), TS-6 (types), DF-3 (normalize), DF-5 (spec-aware detection), DF-6 (chain registry), DF-8 (asset registry)
+**Avoids:** Pitfall 13 (fixture drift) -- create fixtures from the canonical x402 spec, not existing code
+**Effort:** ~3-4 days
 
-**Delivers:**
-- Project structure (component directories)
-- State management pattern (Proxy-based reactivity or simple state object)
-- Component boundaries defined
-- Cloudflare Worker skeleton with CORS configured
+### Phase 2: Crypto Vendoring and Address Validation
+**Rationale:** Crypto primitives are the highest-risk components and must be proven correct before building validation rules on top. Base58 and keccak256 are independent and can be built/tested in parallel.
+**Delivers:** `vendor/base58.ts`, `vendor/keccak256.ts`, `rules/address.ts` with EVM checksum and Solana byte-length validation.
+**Addresses:** Deep address validation (PRD requirement), EIP-55 checksums, Solana Base58 decoding
+**Avoids:** Pitfall 1 (keccak vs SHA-3), Pitfall 2 (Base58 leading zeros), Pitfall 6 (EIP-55 input encoding), Pitfall 9 (Solana validation ceiling -- accept the limitation and document it)
+**Effort:** ~2-3 days
 
-**Addresses:**
-- Pitfall: Vanilla JS state spaghetti (must prevent from start)
-- Architecture: Unidirectional data flow pattern established
-- Stack: Development environment setup (Wrangler CLI, local server)
+### Phase 3: Validation Rules and Orchestrator
+**Rationale:** With types, detection, normalization, and address validation in place, the remaining rules (structure, requirements, amount, network) and the orchestrator can be built. This phase wires everything together into the public API.
+**Delivers:** `rules/structure.ts`, `rules/requirements.ts`, `rules/amount.ts`, `rules/network.ts`, `validate.ts`, `index.ts`. Full `validate()` API with errors, warnings, fix suggestions, strict mode.
+**Addresses:** TS-1 (validate API), TS-3 (field paths), TS-4 (messages), TS-7 (string/object input), TS-8 (layered validation), DF-1 (fix suggestions), DF-2 (errors/warnings), DF-4 (strict mode), DF-7 (normalized in result)
+**Avoids:** Over-abstracting the rule system (ARCHITECTURE anti-pattern 2)
+**Effort:** ~4-5 days
 
-**Research flag:** Standard patterns, no additional research needed.
+### Phase 4: Build Pipeline and Package Publishing
+**Rationale:** Build config is easier to debug with working code. All three output formats (ESM, CJS, UMD/IIFE) need verification. Type declarations must resolve across all consumer configurations.
+**Delivers:** Working tsdown config producing all formats, verified type declarations, `npm pack` producing correct tarball, browser IIFE bundle tested.
+**Addresses:** Build requirements (STACK), package.json exports (ARCHITECTURE)
+**Avoids:** Pitfall 3 (IIFE export nesting), Pitfall 4 (types resolution), Pitfall 5 (dist excluded from publish), Pitfall 11 (Node code in browser bundle)
+**Effort:** ~1-2 days
 
----
-
-#### Phase 1: Core Validation Engine
-**Rationale:** Validation is the core value proposition. All features depend on this working correctly. Must implement checksum validation here to avoid disaster (false positives = fund loss).
-
-**Delivers:**
-- Validation engine with rule registry
-- Required fields validation (x402Version, payments array)
-- Chain-specific address validation with checksums (EVM, Solana, Bitcoin)
-- Chain/asset combination validation
-- Error aggregation and result formatting
-
-**Addresses:**
-- Pitfall: Address checksum blindness (critical - checksums NOT optional)
-- Pitfall: Client-side validation only (dual validation: browser + Worker)
-- Pitfall: Async race conditions (AbortController pattern)
-- Features: Real-time validation, error/warning distinction
-- Architecture: Rule registry pattern, chain of responsibility
-
-**Research flag:** **Needs deeper research** — Chain-specific checksum implementation details, `multicoin-address-validator` library integration, x402 spec validation rules.
-
----
-
-#### Phase 2: Input & Proxy
-**Rationale:** Can't validate without input. Depends on validation engine being functional. Proxy is separate concern from validation logic, can be built in parallel once engine exists.
-
-**Delivers:**
-- Input handler (URL vs JSON detection)
-- JSON parser with error handling
-- Cloudflare Worker proxy (fetch facilitator URLs)
-- X-Payment header extraction
-- Proxy client wrapper with error handling
-
-**Addresses:**
-- Pitfall: CORS proxy error swallowing (structured error responses)
-- Pitfall: Network error = silent failure (try-catch, timeout protection)
-- Features: Multiple input methods (URL, paste JSON)
-- Stack: Cloudflare Worker deployment
-
-**Research flag:** Standard patterns (Cloudflare Worker CORS proxy is well-documented).
-
----
-
-#### Phase 3: Results Display & UX
-**Rationale:** Validation works, now make it usable. Can iterate on UX without changing validation logic thanks to unidirectional data flow.
-
-**Delivers:**
-- Results panel (pass/fail/warning states)
-- Error message formatting (user-friendly)
-- Loading states (spinner, disabled form)
-- Success confirmation UI
-- Copy to clipboard button
-- Format/beautify output
-
-**Addresses:**
-- Pitfall: Cryptic error messages (user-friendly translations)
-- Pitfall: Missing loading states (perceived bugs)
-- Features: Clear error messages, success confirmation, copy to clipboard
-- UX best practices: Inline errors, highlight fields, icons + color
-
-**Research flag:** Standard patterns (well-documented UX patterns for validation tools).
-
----
-
-#### Phase 4: Examples & Help
-**Rationale:** New users need guidance. This is polish that comes after core functionality works.
-
-**Delivers:**
-- Load example button (valid x402 configs for each chain)
-- Example JSON for Ethereum, Solana, Bitcoin
-- Show raw JSON toggle
-- Help tooltips or documentation link
-
-**Addresses:**
-- Features: Example templates (differentiator)
-- Features: Show raw JSON toggle
-- UX: Reduce friction for new users
-
-**Research flag:** No research needed (simple feature).
-
----
-
-#### Phase 5: Polish & Testing
-**Rationale:** Final hardening before launch. Test edge cases discovered in research (mixed-case checksums, rate limiting, timeout scenarios).
-
-**Delivers:**
-- Mobile responsiveness
-- Keyboard shortcuts (optional)
-- Local storage for last validation (optional)
-- Comprehensive testing (checksum edge cases, error scenarios)
-- Performance optimization (debouncing tuning)
-
-**Addresses:**
-- Features: Mobile responsiveness (table stakes)
-- Quality: Edge case coverage from pitfalls research
-- Performance: Debouncing, caching
-
-**Research flag:** No research needed (polish phase).
-
----
+### Phase 5: Website Integration
+**Rationale:** Requires a proven, built SDK. Keeps the existing website working until the SDK is validated.
+**Delivers:** Updated `index.html` (5 script tags become 2), adapted `input.js`, retired `validator.js` + `chains.js`, updated example configs to canonical v2 format.
+**Addresses:** Website integration (ARCHITECTURE), CDN distribution (ARCHITECTURE)
+**Avoids:** Pitfall 7 (result shape mismatch) -- map all 8+ field changes, use adapter function or rewrite display code
+**Effort:** ~2-3 days
 
 ### Phase Ordering Rationale
 
-1. **Foundation before features** — Research shows vanilla JS projects become spaghetti without upfront architecture. Establishing patterns in Phase 0 prevents refactoring pain later.
-
-2. **Validation before input** — Can test validation with hardcoded configs. Input/proxy is just plumbing to feed the engine. Separating concerns enables parallel development.
-
-3. **Functionality before UX** — Unidirectional data flow means display layer is decoupled. Can iterate on UX (Phase 3) without touching validation (Phase 1).
-
-4. **Core before polish** — Examples and help (Phase 4-5) are meaningless if validation doesn't work. Build the engine first, add guide rails later.
-
-5. **Pitfall alignment** — Critical pitfalls (checksum validation, state management) are addressed in early phases (0-1). UX pitfalls (loading states, error messages) in later phases (3).
+- **Phase 0 before everything:** Monorepo structure is a physical prerequisite for SDK code.
+- **Phase 1 before Phase 2:** Types define the interfaces that crypto/address validation returns. Detection and normalization provide the data that rules consume. Error codes are the foundation every rule references.
+- **Phase 2 before Phase 3:** Address validation is the deepest risk. If keccak256 vendoring fails or takes longer than expected, it should not block other validation rules -- but the rules need the address module's interface to be defined.
+- **Phase 3 before Phase 4:** Build config is easier to iterate on with working code and passing tests.
+- **Phase 4 before Phase 5:** Website integration requires a built IIFE bundle. Don't touch the working website until the SDK is proven.
+- **Total estimated effort:** 13-18 developer-days across all phases.
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase 1 (Core Validation):** Chain-specific checksum algorithms, `multicoin-address-validator` library API, x402 spec validation rules, address format edge cases (mixed-case, different encodings). Research critical because checksum errors = fund loss.
+**Phases needing research during planning:**
+- **Phase 2 (Crypto Vendoring):** Keccak-256 extraction approach needs validation. Two viable strategies exist: (a) vendor ~150-200 lines from `@noble/hashes` into `src/vendor/keccak256.ts`, or (b) add `@noble/hashes` as devDependency and bundle via tsdown tree-shaking. Strategy (b) is simpler but may produce a larger bundle. A test build should determine the size impact.
+- **Phase 4 (Build Pipeline):** tsdown's exact config options for UMD format, globalName, and output extensions should be verified against tsdown documentation. STACK.md rates tsdown UMD config confidence as MEDIUM.
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 0 (Foundation):** Vanilla JS state management patterns well-documented
-- **Phase 2 (Input & Proxy):** Cloudflare Worker CORS proxy has official examples
-- **Phase 3 (Results Display):** Validation tool UX patterns extensively documented
-- **Phase 4 (Examples):** Simple feature, no novel patterns
-- **Phase 5 (Polish):** Standard testing and optimization practices
+**Phases with standard patterns (skip research):**
+- **Phase 0 (Repo Restructuring):** npm workspaces -- fully documented, trivial.
+- **Phase 1 (Types/Detection):** Standard TypeScript patterns, clear from FEATURES.md research.
+- **Phase 3 (Validation Rules):** Well-established patterns from Zod/Ajv/ESLint research.
+- **Phase 5 (Website Integration):** Integration points fully mapped in ARCHITECTURE.md.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Vanilla JS patterns verified across multiple 2026 sources; Cloudflare Workers official documentation; Pico CSS active maintenance |
-| Features | HIGH | Feature expectations derived from analyzing established validators (JSONLint, JSON Schema Validator) and UX research from Nielsen Norman Group, Smashing Magazine |
-| Architecture | HIGH | Architecture patterns validated by Go Make Things (vanilla JS authority), Patterns.dev, and 2026 frontend architecture guides |
-| Pitfalls | HIGH | Pitfalls sourced from OWASP (security), official crypto validation docs, 2026 UX research, and Cloudflare Workers documentation |
+| Stack | HIGH | vitest, TypeScript, npm workspaces are proven. tsdown is MEDIUM (0.x but active, production adopters, tsup as fallback). |
+| Features | HIGH | Cross-referenced Zod, Ajv, libphonenumber-js, multicoin-address-validator. Feature list is complete and prioritized. |
+| Architecture | HIGH | Layered pipeline is a standard pattern. Component boundaries are clear. Build pipeline uses proven tools. |
+| Pitfalls | HIGH | Verified against official specs (EIP-55, Base58, tsup issues, TypeScript publishing). Phase-specific warnings are actionable. |
 
 **Overall confidence:** HIGH
 
-Research quality is high across all dimensions. Stack recommendations come from official documentation (Cloudflare) and recognized authorities (Go Make Things for vanilla JS). Feature expectations derived from analyzing live tools and published UX research. Architecture patterns validated by 2026 guides. Pitfalls grounded in security best practices (OWASP) and domain-specific risks (blockchain address validation).
-
 ### Gaps to Address
 
-**Gap: x402 specification details**
-- Research covers general validation patterns but not x402-specific rules
-- **Resolution:** Consult x402 spec documentation during Phase 1 planning; may need `/gsd:research-phase` if spec is complex or poorly documented
-- **Impact:** Medium — affects validation rule implementation details but not overall architecture
+1. **tsdown UMD config specifics:** The exact tsdown options for UMD format (`globalName`, `outExtension`, `platform`) need verification against current tsdown docs. STACK.md provides a config template but marks it MEDIUM confidence. **Resolution:** Verify during Phase 4 implementation; tsup IIFE is the fallback.
 
-**Gap: Chain coverage completeness**
-- Research covers Ethereum, Bitcoin, Solana but x402 may support additional chains
-- **Resolution:** Review x402 spec for complete chain list; prioritize EVM-compatible chains first (shared address format)
-- **Impact:** Low — architecture supports adding chains via configuration, not code changes
+2. **Keccak-256 vendoring strategy:** STACK.md estimates 150-200 lines and ~3-4KB minified for surgical extraction. ARCHITECTURE.md suggests bundling `@noble/hashes` as a devDependency (estimated ~7-10KB for keccak portion). The exact size difference should be measured with a test build. **Resolution:** Try the devDependency-bundle approach first (simpler); if bundle size exceeds the 15KB target, switch to surgical extraction.
 
-**Gap: `multicoin-address-validator` library limitations**
-- Research mentions library but doesn't verify it supports all needed chains or checksum algorithms
-- **Resolution:** Evaluate library during Phase 1; may need custom checksum implementations for unsupported chains
-- **Impact:** Medium — affects Phase 1 complexity; custom implementations increase testing burden
+3. **tsdown vs tsup disagreement across research files:** STACK.md recommends tsdown; ARCHITECTURE.md's examples use tsup. **Resolution:** Follow STACK.md (tsdown). ARCHITECTURE.md's tsup examples are illustrative of the pattern, not prescriptive of the tool.
 
-**Gap: Facilitator API response format**
-- Research assumes X-Payment header but doesn't confirm facilitator response structure
-- **Resolution:** Test with real facilitator endpoints during Phase 2; parse defensively with fallbacks
-- **Impact:** Low — parser can handle multiple response formats; user provides URL, we extract what exists
+4. **npm name availability:** `x402check` must be verified as available on npm before work begins. **Resolution:** Run `npm view x402check` in Phase 0. Backup names: `@x402check/core`, `x402-validate`.
+
+5. **TypeScript version range interaction with tsdown:** STACK.md recommends `^5.8.0` which allows 5.9.x. tsdown supports 5.9; tsup does not. If the fallback to tsup is ever needed, TypeScript must be pinned to 5.8.x. **Resolution:** Use `^5.8.0` and only pin if falling back to tsup.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-**Stack & Architecture:**
-- [Vanilla JavaScript Is Quietly Taking Over Again](https://medium.com/@arkhan.khansb/vanilla-javascript-is-quietly-taking-over-again-heres-why-developers-are-switching-back-5ee1588e2bfa) — 2026 vanilla JS trends
-- [How I structure my vanilla JS projects - Go Make Things](https://gomakethings.com/how-i-structure-my-vanilla-js-projects/) — Chris Ferdinandi (vanilla JS authority)
-- [CORS header proxy - Cloudflare Workers docs](https://developers.cloudflare.com/workers/examples/cors-header-proxy/) — Official Cloudflare documentation
-- [Pico CSS - Minimal CSS Framework](https://picocss.com/) — Official documentation
-- [The Complete Guide to Frontend Architecture Patterns in 2026](https://dev.to/sizan_mahmud0_e7c3fd0cb68/the-complete-guide-to-frontend-architecture-patterns-in-2026-3ioo) — Modern architecture patterns
-
-**Features & UX:**
-- [10 Design Guidelines for Reporting Errors in Forms - NN/G](https://www.nngroup.com/articles/errors-forms-design-guidelines/) — Nielsen Norman Group (UX authority)
-- [Error Message UX, Handling & Feedback - Pencil & Paper](https://www.pencilandpaper.io/articles/ux-pattern-analysis-error-feedback) — UX patterns research
-- [JSONLint - The JSON Validator](https://jsonlint.com) — Feature comparison baseline
-- [Best JSON Formatter and JSON Validator](https://jsonformatter.org/) — Feature comparison baseline
-
-**Pitfalls & Security:**
-- [OWASP Input Validation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html) — Security best practices
-- [Why Address Validation Is Critical in Blockchain Payments](https://cryptoapis.io/blog/539-why-address-validation-is-critical-in-blockchain-payments-technical-strengths-and-business-assurance) — Crypto validation importance
-- [Ethereum Address Checksum Explained | CoinCodex](https://coincodex.com/article/2078/ethereum-address-checksum-explained/) — EIP-55 checksum specification
-- [multicoin-address-validator - npm](https://www.npmjs.com/package/multicoin-address-validator) — Multi-chain validation library
+- [EIP-55 Specification](https://eips.ethereum.org/EIPS/eip-55) -- EVM address checksum algorithm
+- [CAIP-2 Specification](https://chainagnostic.org/CAIPs/caip-2) -- blockchain ID format
+- [coinbase/x402 GitHub](https://github.com/coinbase/x402) -- canonical PaymentRequirements schema
+- [x402 V2 Launch Announcement](https://www.x402.org/writing/x402-v2-launch) -- v1 vs v2 differences
+- [Zod](https://zod.dev/) -- safeParse() pattern, error structure, as-const over enums
+- [Ajv](https://ajv.js.org/) -- strict mode pattern, error reporting
+- [vitest](https://vitest.dev/) -- v4.x configuration and coverage
+- [@noble/hashes](https://github.com/paulmillr/noble-hashes) -- MIT, Cure53 audited, keccak source
+- [npm workspaces](https://docs.npmjs.com/cli/v10/using-npm/workspaces) -- monorepo configuration
+- [tsup issues #924, #1290, #1369](https://github.com/egoist/tsup) -- UMD limitations, IIFE behavior, TS 5.9 DTS failures
+- [TypeScript ESM/CJS publishing](https://lirantal.com/blog/typescript-in-2025-with-esm-and-cjs-npm-publishing) -- exports field patterns
+- [@arethetypeswrong/cli](https://github.com/arethetypeswrong/arethetypeswrong.github.io) -- type resolution validation
+- [SHA3 vs Keccak-256](https://ethereumclassic.org/blog/2017-02-10-keccak/) -- padding difference explanation
 
 ### Secondary (MEDIUM confidence)
+- [tsdown npm](https://www.npmjs.com/package/tsdown) -- v0.20.1, active development, tsup successor
+- [tsdown docs](https://tsdown.dev/) -- configuration, UMD format support, migration from tsup
+- [TresJS tsdown migration](https://tresjs.org/blog/tresjs-tsdown-migration) -- production adopter case study
+- [multicoin-address-validator](https://www.npmjs.com/package/multicoin-address-validator) -- chain-type extensibility pattern
+- [libphonenumber-js](https://www.npmjs.com/package/libphonenumber-js) -- detect/validate/normalize trifecta pattern
+- [base58-js](https://www.npmjs.com/package/base58-js) -- ~560 byte pure JS Base58 reference
+- [Solana Base58Check discussion](https://github.com/solana-labs/solana/issues/6970) -- no checksum confirmation
 
-**State Management:**
-- [State Management in Vanilla JS: 2026 Trends | Medium](https://medium.com/@chirag.dave/state-management-in-vanilla-js-2026-trends-f9baed7599de) — Vanilla JS patterns
-- [Modern State Management in Vanilla JavaScript: 2026 Patterns and Beyond](https://medium.com/@orami98/modern-state-management-in-vanilla-javascript-2026-patterns-and-beyond-ce00425f7ac5) — Proxy-based reactivity patterns
-
-**Testing:**
-- [Vitest vs Jest 2025 Comparison](https://generalistprogrammer.com/comparisons/vitest-vs-jest) — Testing framework comparison
-- [Best JavaScript Testing Framework 2025](https://www.baserock.ai/blog/best-javascript-testing-framework) — Testing recommendations
-
-### Tertiary (LOW confidence)
-
-**General guidance:**
-- [Top 6 CSS frameworks for 2025](https://blog.logrocket.com/top-6-css-frameworks-2025/) — CSS framework trends
-- [5 Underappreciated JavaScript Libraries 2025](https://thenewstack.io/5-underappreciated-javascript-libraries-to-try-in-2025/) — Library ecosystem
+### Tertiary (needs validation during implementation)
+- tsdown exact UMD config options (`globalName`, `outExtension` for UMD format)
+- Keccak-256 extraction line count from `@noble/hashes` (estimated 150-200, needs verification)
+- Bundle size with bundled `@noble/hashes` via tree-shaking (estimated 7-10KB, needs test build)
 
 ---
-*Research completed: 2026-01-22*
+*Research completed: 2026-01-29*
 *Ready for roadmap: yes*

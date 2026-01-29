@@ -1,275 +1,455 @@
-# Feature Research
+# Feature Landscape: x402check Validation SDK
 
-**Domain:** Developer validation/linting tools (JSON validators, API testers, schema validators)
-**Researched:** 2026-01-22
-**Confidence:** HIGH
+**Domain:** Protocol validation SDK (npm package for x402 PaymentRequired response validation)
+**Researched:** 2026-01-29
+**Confidence:** HIGH (cross-referenced Zod, Ajv, libphonenumber-js, multicoin-address-validator patterns with x402 spec from coinbase/x402 repo)
 
-## Feature Landscape
+## Context
 
-### Table Stakes (Users Expect These)
+This research is for the **v2.0 SDK milestone** -- extracting validation logic from the x402check website into a standalone npm package. The SDK validates x402 PaymentRequired responses (v1, v2, and flat-legacy formats). This document supersedes the v1.0 website-focused feature research.
 
-Features users assume exist. Missing these = product feels incomplete.
+---
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| **Real-time validation** | Users expect instant feedback as they type or paste | LOW | Standard in all modern validators; runs on keyup/paste events |
-| **Clear error messages with line numbers** | Pinpointing exact location of errors is essential for fixing | LOW | Must include line/column numbers and specific description of what's wrong |
-| **Syntax highlighting** | Makes JSON/code readable and errors visible at a glance | LOW | Color-coded formatting for keys, values, strings, numbers |
-| **Multiple input methods** | Users have content in different places (URLs, clipboard, files) | LOW | Paste text, enter URL, upload file are all expected |
-| **Copy to clipboard** | Users need to move validated/formatted content elsewhere | LOW | One-click copy functionality is standard UX |
-| **Format/beautify output** | Minified or messy input should become readable | LOW | Auto-indent with configurable spacing (2/4 spaces, tabs) |
-| **Success confirmation** | Clear "valid" message when no errors found | LOW | Don't just show nothing - confirm success explicitly |
-| **Mobile responsiveness** | Developers debug on phones/tablets too | MEDIUM | Proper viewport, touch-friendly buttons, keyboard doesn't cover errors |
+## Table Stakes
 
-### Differentiators (Competitive Advantage)
+Features consumers expect from any validation SDK. Missing these means the SDK feels incomplete or amateur.
 
-Features that set the product apart. Not required, but valuable.
+### TS-1: Core `validate()` API Returning Structured Results
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Example templates/presets** | Reduces friction for new users; shows what valid input looks like | LOW | "Load example" button with valid sample data |
-| **Actionable error messages** | Tells users HOW to fix, not just WHAT is wrong | MEDIUM | "Missing required field 'address'. Add it to the payment_methods array" vs "Invalid schema" |
-| **Error vs warning distinction** | Not all issues are blocking; warnings guide best practices | MEDIUM | Red for errors (invalid), yellow for warnings (works but not recommended) |
-| **Context-aware validation** | Domain-specific rules beyond syntax (e.g., valid ETH addresses, asset/chain combos) | HIGH | For x402: validate address formats per chain, check asset compatibility |
-| **Show raw JSON toggle** | Users want to see both formatted and original versions | LOW | Toggle between beautified view and exact input |
-| **Shareable validation URLs** | Allows sharing specific validation states with teammates | MEDIUM | Encode input in URL params or generate short links |
-| **No sign-up required** | Eliminates friction; developers hate creating accounts for simple tools | LOW | All features work without authentication |
-| **Privacy-first (client-side)** | Data never leaves browser; critical for sensitive configs | LOW | Everything runs in JavaScript; no server uploads |
-| **Keyboard shortcuts** | Power users want speed (Ctrl+V to paste, Ctrl+Enter to validate) | MEDIUM | Accessibility and efficiency for frequent users |
-| **Progressive disclosure** | Show simple view by default, advanced options on demand | MEDIUM | Don't overwhelm with every option upfront |
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | Every validation library (Zod, Ajv, Valibot) returns structured results, not thrown errors |
+| **Complexity** | MEDIUM |
+| **Pattern** | Zod's `safeParse()` returns `{ success, data, error }` discriminated union. Ajv returns `{ valid, errors }`. Both avoid throwing on invalid input. |
+| **Recommendation** | Return `{ valid: boolean, errors: ValidationIssue[], warnings: ValidationIssue[], version, normalized }`. Use the non-throwing pattern -- validation SDKs must never throw on invalid input. Throwing should be reserved for programmer errors (e.g., passing wrong argument types), not for invalid data. |
+| **Dependencies** | Requires ValidationIssue type, format detection, normalization |
+| **Existing** | Current `validateX402Config()` already returns this shape. Needs cleanup and TypeScript types. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+### TS-2: Machine-Readable Error Codes
 
-Features that seem good but create problems for a simple validation tool.
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | Zod uses `ZodIssueCode` (`invalid_type`, `invalid_string`, etc.). Ajv uses `keyword` (`required`, `type`, `pattern`). Consumers need codes to programmatically react to errors, not parse human-readable strings. |
+| **Complexity** | LOW |
+| **Pattern** | String enum or `as const` object. Codes like `MISSING_SCHEME`, `INVALID_NETWORK_FORMAT`, `BAD_EVM_CHECKSUM`. |
+| **Recommendation** | Use SCREAMING_SNAKE_CASE string constants (not TypeScript `enum`) exported as `const ErrorCode = { ... } as const`. String enums don't tree-shake well; `as const` objects do. Zod v4 moved away from enums for this reason. |
+| **Dependencies** | None -- foundational type |
+| **Existing** | Current code uses ad-hoc message strings with no codes. Must be built from scratch. |
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| **Validate-on-every-keystroke** | Real-time feedback seems good | Creates annoying "you're wrong" messages before user finishes typing | Validate on blur or after 500ms typing pause |
-| **User accounts / saved validations** | "I want to save my work" | Adds complexity, privacy concerns, maintenance burden | Use shareable URLs or local storage; export to file |
-| **Batch validation (multiple files/URLs)** | "I need to validate 50 configs" | Scope creep for v1; adds UI complexity, error handling, progress tracking | Defer to v2 or separate CLI tool |
-| **Live endpoint testing** | "Can you actually make the payment request?" | Requires backend, error handling, rate limiting, security | Out of scope; focus on config validation only |
-| **Custom validation rules** | "Every project needs different rules" | Turns simple tool into complex rules engine | Stick to spec; users can fork for custom needs |
-| **AI-powered suggestions** | "AI is trendy; suggest fixes automatically" | Overkill for spec validation; hallucination risk; adds latency | Clear error messages with examples are sufficient |
-| **Version history / undo** | "I want to go back to previous version" | Adds complexity for minimal value in single-page tool | Browser back button works; use local storage if needed |
-| **Dark mode** | "All tools need dark mode" | Low priority for MVP; adds CSS complexity | Use system preference initially; defer custom toggle |
+### TS-3: Field Path in Error Reports
+
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | Zod provides `path: (string | number)[]` (e.g., `['accepts', 0, 'network']`). Ajv uses JSON pointer format. All modern validators locate errors precisely. |
+| **Complexity** | LOW |
+| **Pattern** | Use string path format (e.g., `accepts[0].network`) rather than array format. String paths are simpler to read in CLI output and JSON logs. Ajv supports both, but string paths are more common in domain-specific validators. |
+| **Recommendation** | `field: string` with dot-notation paths. Use bracket notation for array indices: `accepts[0].network`, `accepts[1].payTo`. |
+| **Dependencies** | Must be threaded through all validation rules |
+| **Existing** | Current code uses partial paths like `payments[0].chain`. Needs CAIP-2 field name updates but pattern exists. |
+
+### TS-4: Human-Readable Error Messages
+
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | Every validator provides `message: string`. Users should be able to display these directly. |
+| **Complexity** | LOW |
+| **Pattern** | Zod: `"Expected string, received number"`. libphonenumber-js: `"TOO_SHORT"`. For domain-specific validators, messages should use domain language: `"Network must use CAIP-2 format (e.g., 'eip155:8453')"`. |
+| **Recommendation** | Each error code maps to a default message template. Messages should be complete sentences that a developer unfamiliar with x402 can understand. |
+| **Dependencies** | Requires error code definitions |
+| **Existing** | Current messages are decent but inconsistent. Needs standardization. |
+
+### TS-5: `detect()` API for Format Identification
+
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | libphonenumber-js detects country from number. bitcoin-address-validation has `getAddressInfo()`. Format detection without full validation is a fundamental operation. |
+| **Complexity** | LOW |
+| **Pattern** | Pure function: `detect(input) => 'v2' | 'v1' | 'flat-legacy' | 'unknown'`. No side effects, no mutation. Should accept string or object. |
+| **Recommendation** | Implement as described in PRD. Fast, lightweight -- only examines structure (has `accepts`? has `x402Version`?), does not validate field values. |
+| **Dependencies** | JSON parsing (if string input) |
+| **Existing** | `detectFormat()` exists in current code. Needs updating for correct v1/v2 distinction (current code thinks `payments` is v2 but spec uses `accepts`). |
+
+### TS-6: TypeScript Type Definitions
+
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | All modern npm packages ship `.d.ts` files. TypeScript adoption in the x402 ecosystem is universal (the official @x402/core is TypeScript). |
+| **Complexity** | LOW (if written in TypeScript from the start) |
+| **Pattern** | Export interfaces for all public types: `ValidationResult`, `ValidationIssue`, `NormalizedConfig`, etc. Mirror the x402 spec types where appropriate. |
+| **Recommendation** | Write the SDK in TypeScript. Export types from `index.d.ts`. Align type names with @x402/core where possible (e.g., `PaymentRequirements` matches their naming). |
+| **Dependencies** | Build system (tsup) generates declarations |
+| **Existing** | Current code is plain JavaScript. Must be rewritten in TypeScript. |
+
+### TS-7: JSON String and Object Input Support
+
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | Validators must handle both parsed objects and raw strings. Zod accepts any input. Ajv's `validate()` accepts objects. x402 configs arrive as JSON strings (from headers) or objects (from parsed responses). |
+| **Complexity** | LOW |
+| **Pattern** | Accept `string | object` for all public APIs. If string, parse as JSON first. If parsing fails, return `INVALID_JSON` error. |
+| **Recommendation** | All three public functions (`validate`, `detect`, `normalize`) should accept `string | Record<string, unknown>`. JSON parse errors are reported as the first validation error. |
+| **Dependencies** | None |
+| **Existing** | Current `validateX402Config()` already handles both. Carry forward. |
+
+### TS-8: Layered Validation (Structure then Fields then Network)
+
+| Aspect | Detail |
+|--------|--------|
+| **Why Expected** | Ajv validates schema structure before evaluating constraints. Zod validates outer types before inner refinements. Returning "invalid network format" when the entire structure is unparseable is confusing. |
+| **Complexity** | MEDIUM |
+| **Pattern** | Validate in ordered layers: (1) JSON parseable? (2) Recognized format? (3) Required fields present? (4) Field values valid? (5) Network-specific checks. Short-circuit on structural errors -- don't report field-level errors if structure is unrecognizable. |
+| **Recommendation** | Five layers as defined in PRD: Structure -> Version/Shape -> PaymentRequirements fields -> Network-specific -> Legacy format warnings. Each layer produces errors/warnings independently. |
+| **Dependencies** | All validation rules organized by layer |
+| **Existing** | Current code has implicit layering (parse JSON, detect format, validate fields). Needs explicit layer separation. |
+
+---
+
+## Differentiators
+
+Features that set x402check SDK apart from generic validators. Not expected in all SDKs, but provide concrete competitive advantage for this domain.
+
+### DF-1: Actionable Fix Suggestions
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | Most validators say "invalid". x402check says "Use 'eip155:8453' instead of 'base'". This is the SDK's core UX advantage. |
+| **Complexity** | MEDIUM |
+| **Pattern** | `fix?: string` field on ValidationIssue. libphonenumber-js normalizes to E.164 and shows what the valid format looks like. bitcoin-address-validation provides `getAddressInfo()` with details. The pattern is: when you know what the user *meant*, tell them the correct form. |
+| **Recommendation** | Include `fix` on every error where the correct value can be inferred. For `SIMPLE_CHAIN_NAME`: `"Use 'eip155:8453' instead of 'base'"`. For `BAD_EVM_CHECKSUM`: `"Use '0xAbC...' (checksummed)"`. For `V1_FIELD_NAMES`: `"Use 'amount' instead of 'maxAmountRequired'"`. |
+| **Dependencies** | Network registry (for chain name mapping), address validation (for checksum correction) |
+| **Existing** | Current code has `fix` field. Needs expansion and consistency. |
+
+### DF-2: Errors vs Warnings Distinction
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | Generic validators (Zod, Ajv) only have errors. x402check distinguishes blocking issues (config won't work) from advisory issues (config works but is suboptimal). This maps directly to ESLint's error/warn/off pattern. |
+| **Complexity** | LOW |
+| **Pattern** | ESLint: `"error"` (exit code 1), `"warn"` (report but pass), `"off"` (ignore). Ajv strict mode: violations either throw or log depending on config. The pattern is: errors mean "this config will fail at runtime", warnings mean "this config works but violates best practices or uses deprecated formats". |
+| **Recommendation** | Every ValidationIssue has `severity: 'error' | 'warning'`. Examples: missing `payTo` = error (config will fail); using flat format = warning (config works but should upgrade); unknown network = warning (might be a new chain we don't recognize yet). `valid` is true only when `errors.length === 0`. Warnings do not affect `valid`. |
+| **Dependencies** | None -- fundamental to ValidationIssue type |
+| **Existing** | Current code already separates errors and warnings arrays. Carry forward. |
+
+### DF-3: `normalize()` API -- Any Format to Canonical v2
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | libphonenumber-js normalizes phone numbers to E.164. Address validators normalize to checksummed format. x402check normalizes flat-legacy and v1 configs to canonical v2 shape. This lets consumers always work with one format internally. |
+| **Complexity** | MEDIUM |
+| **Pattern** | `normalize(input) => NormalizedConfig | null`. Returns null if input is too broken to normalize (unknown format). Normalization should be idempotent -- normalizing an already-v2 config returns the same shape. |
+| **Recommendation** | Implement as described in PRD. Key mappings: flat `payTo/amount/network/currency` -> v2 `accepts[]`. v1 `maxAmountRequired` -> v2 `amount`. Simple chain names -> CAIP-2 identifiers. Always returns canonical v2 shape with `x402Version: 2`, `accepts[]`, `resource`. |
+| **Dependencies** | Format detection (DF-5), chain name registry |
+| **Existing** | `normalizeConfig()` exists but normalizes to wrong field names (`payments` instead of `accepts`). Needs rewrite. |
+
+### DF-4: Strict Mode (Warnings Become Errors)
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | Ajv has `strict: true | false | "log"`. ESLint has `--max-warnings 0`. TypeScript has `strict: true`. CI/CD pipelines need a way to enforce that all warnings are resolved. x402check strict mode makes this trivial. |
+| **Complexity** | LOW |
+| **Pattern** | `validate(config, { strict: true })` -- warnings are promoted to errors. `valid` becomes false if any warnings exist. The Ajv pattern is ideal: strict mode doesn't change what is detected, only the severity of what was already found. |
+| **Recommendation** | Accept options as second argument: `validate(config, { strict?: boolean })`. When `strict: true`, post-process the result: move all warnings to errors, set `valid = false` if any existed. This is a ~10-line wrapper, not a deep architectural change. |
+| **Dependencies** | Errors vs warnings distinction (DF-2) must be implemented first |
+| **Existing** | Not implemented. Mentioned as open question in PRD. Recommend including. |
+
+### DF-5: x402 Spec-Aware Format Detection
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | Not just "is this valid JSON?" but "what version of x402 is this?" Detects v2 (with `accepts` + `x402Version: 2` + `resource`), v1 (with `accepts`), flat-legacy (root-level fields), and unknown formats. No other tool does this. |
+| **Complexity** | LOW |
+| **Pattern** | Decision tree as defined in PRD: has `accepts`? -> has `x402Version: 2` + `resource`? -> v2. Otherwise -> v1. No `accepts`? -> has root-level `payTo`/`amount`? -> flat-legacy. Otherwise -> unknown. |
+| **Recommendation** | Fast, cheap function. Does not validate field values -- only examines structural markers. Returns immediately on first match. |
+| **Dependencies** | None |
+| **Existing** | `detectFormat()` exists but uses wrong field names (checks for `payments` array, which is not in the spec). Needs rewrite for spec correctness. |
+
+### DF-6: Extensible Chain Validation Registry
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | multicoin-address-validator uses `chainType` option to validate unknown tokens. The x402 spec supports new chains through CAIP-2. An extensible registry means the community can add new chains without forking the SDK. |
+| **Complexity** | MEDIUM |
+| **Pattern** | Two approaches from the ecosystem: (1) multicoin-address-validator's `chainType` fallback -- validate unknown tokens using known chain type's address format. (2) fastest-validator's `v.plugin(myPlugin)` -- register custom validators. For x402check, approach (1) is cleaner: validate by CAIP-2 namespace (`eip155:*` uses EVM rules, `solana:*` uses Solana rules). |
+| **Recommendation** | Default registry covers known networks (Base, Base Sepolia, Avalanche, Solana mainnet/devnet/testnet, Stellar, Aptos). Unknown networks with recognized CAIP-2 namespace (`eip155:*`, `solana:*`) get validated by namespace rules. Custom validators can be passed via options: `validate(config, { networkValidators: { 'eip155': myEvmValidator } })`. |
+| **Dependencies** | CAIP-2 parsing, network registry data structure |
+| **Existing** | Current code has hardcoded `SUPPORTED_CHAINS` array. Needs architectural change to registry pattern. |
+
+### DF-7: Normalized Result Always Included
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | validate() returns `normalized: NormalizedConfig | null` alongside errors. Even if there are warnings, users get a canonical v2 shape they can use directly. This reduces the common two-step pattern of validate-then-normalize to a single call. |
+| **Complexity** | LOW (once normalize() is built) |
+| **Pattern** | Inspired by Zod's `safeParse()` which returns `data` alongside the success flag. The normalized result is the "cleaned" version of the input, available even when validation produces warnings. |
+| **Recommendation** | `normalized` is `null` only when the input is completely unparseable (invalid JSON, unknown format). If there are only warnings, normalized is always populated. This means consumers can write: `const { valid, normalized } = validate(config); if (normalized) useIt(normalized);` |
+| **Dependencies** | normalize() function |
+| **Existing** | Current code returns `normalized` on the result. Carry forward and formalize. |
+
+### DF-8: Known Asset Registry per Network
+
+| Aspect | Detail |
+|--------|--------|
+| **Value Proposition** | Validates that asset addresses are recognized for the specified network. Catches common mistakes like using Base USDC address on Solana. |
+| **Complexity** | LOW |
+| **Pattern** | Static lookup table: `{ 'eip155:8453': { 'USDC': '0x833589...' } }`. When `asset` field matches a known symbol, verify the address. When `asset` is an address, check if it's known for the network. Unknown assets get a warning, not an error. |
+| **Recommendation** | Ship with known assets from the x402 ecosystem (USDC on Base, Base Sepolia, Solana mainnet, Solana devnet). Unknown assets produce `UNKNOWN_ASSET` warning. Users can augment via options if needed. |
+| **Dependencies** | Network registry (DF-6) |
+| **Existing** | `CHAIN_ASSETS` exists in current code. Needs CAIP-2 key format and expansion. |
+
+---
+
+## Anti-Features
+
+Features to deliberately NOT build. Common requests or assumptions that would harm the SDK.
+
+### AF-1: Network Calls of Any Kind
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Making HTTP requests to verify facilitator liveness, resolve asset addresses, or test endpoints | Validation must be synchronous, offline-capable, and side-effect-free. Network calls add latency, failure modes, and make the SDK unsuitable for CI/CD, browser, and serverless environments. Ajv and Zod are both purely synchronous for validation. | All validation is pure function computation. The SDK operates on static data (the config object) and static registries (known networks/assets). If users need liveness checks, they build that on top. |
+
+### AF-2: Payment Payload Construction or Signing
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Building payment payloads, signing transactions, or interacting with wallets | This is @x402/core's job. x402check validates *configs*, not *payments*. Adding this would create dependency on ethers.js, web3.js, or @solana/web3.js, destroying the zero-dependency goal. | Clearly document scope: "x402check answers 'is this 402 config correct?' It does not construct or send payments." |
+
+### AF-3: On-Chain Verification
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Verifying that asset contracts exist on-chain, checking balances, or confirming facilitator registration | Requires RPC connections, chain-specific SDKs, and introduces async complexity. The Coinbase facilitator handles settlement verification. | Keep validation offline. If an asset address "looks valid" for its network type, that's sufficient. Flag unknown assets as warnings. |
+
+### AF-4: Schema-First Validation (Zod/Ajv Under the Hood)
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Using Zod or Ajv as the validation engine internally | Adds runtime dependency (Zod is ~13KB min, Ajv is ~30KB). The x402 spec has ~20 validation rules total -- a schema library is overkill. Domain-specific validation (CAIP-2 parsing, EVM checksums, Base58 decoding) cannot be expressed as JSON Schema or Zod schemas anyway. The PRD targets <15KB UMD bundle. | Write validation rules as plain TypeScript functions. Each rule is a function that receives a value and context, returns `ValidationIssue[]`. This is simpler, smaller, and more debuggable than schema DSLs. |
+
+### AF-5: Configurable Rule Severity
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Letting users configure individual rules as error/warning/off (ESLint-style) | ESLint has 300+ rules; per-rule configuration makes sense. x402check has ~20 rules; per-rule configuration is over-engineering. It also means users can silence critical errors (`MISSING_PAY_TO` as "off"), producing configs that will fail at runtime. | Provide only `strict: true/false`. Strict promotes all warnings to errors. Individual rules have fixed severity based on spec requirements. If `payTo` is missing, it's always an error, period. |
+
+### AF-6: Async Validation
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Making validate() return a Promise | All validation logic is synchronous. Introducing async would force consumers to `await` every call, complicating usage in synchronous contexts (Express middleware, CLI tools, template rendering). Zod's `safeParse()` is synchronous; `safeParseAsync()` exists only for async refinements. | Keep all public APIs synchronous. If users need async operations (fetching config from URL, then validating), they handle the async part themselves: `const config = await fetch(url); const result = validate(config);` |
+
+### AF-7: Mutable State or Singleton Pattern
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Global validator instance that accumulates state or configuration | Creates hidden coupling, makes testing harder, and prevents parallel usage. fastest-validator uses `new Validator()` instances, which is better than singletons but still unnecessary for stateless validation. | Pure functions. `validate()`, `detect()`, `normalize()` are stateless. Options are passed per-call. No global configuration, no `new Validator()`, no `.configure()`. |
+
+### AF-8: Custom Error Message Templates
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| i18n support, custom message formatting, or message template overrides | Zod v4 unified error maps. Ajv has `ajv-i18n`. These make sense for form validation SDKs used by end-users. x402check consumers are developers building x402 integrations -- they read English error messages in development/CI. | Ship one set of clear English messages. Consumers who need different messaging can map error codes to their own messages: `const myMessage = errorCodeToMessage[issue.code]`. The machine-readable code is the stable API; the message is for convenience. |
+
+---
 
 ## Feature Dependencies
 
 ```
-[Real-time validation]
-    └──requires──> [Error messaging system]
-                       └──requires──> [Line number detection]
-
-[Example templates]
-    └──enhances──> [First-time user experience]
-
-[Show raw JSON]
-    └──requires──> [Format/beautify]
-
-[Shareable URLs]
-    └──requires──> [URL encoding/decoding]
-    └──conflicts──> [Privacy-first client-side] (if URLs hit backend)
-
-[Context-aware validation]
-    └──requires──> [Chain-specific validators (EVM, Solana, etc.)]
-    └──requires──> [Asset/chain compatibility matrix]
-
-[Keyboard shortcuts]
-    └──enhances──> [All input/output actions]
-    └──requires──> [Accessibility considerations]
+[TS-2: Error Codes]
+    |
+    +---> [TS-3: Field Paths] -----+
+    |                              |
+    +---> [TS-4: Messages] --------+---> [TS-1: validate() API]
+    |                              |           |
+    +---> [DF-1: Fix Suggestions] -+           +---> [DF-7: Normalized in Result]
+                                               |           |
+[TS-5: detect() API] ----+                     |     [DF-3: normalize() API]
+                          |                    |
+[TS-8: Layered Rules] ---+---> [DF-2: Errors/Warnings] ---> [DF-4: Strict Mode]
+                          |
+[DF-6: Chain Registry] --+---> [DF-8: Asset Registry]
+                          |
+                          +---> [DF-1: Fix Suggestions (chain name mapping)]
 ```
 
-### Dependency Notes
+### Key Dependency Insights
 
-- **Real-time validation requires error messaging system:** You can't show validation feedback without a way to display errors clearly
-- **Show raw JSON requires format/beautify:** Toggle only makes sense if you have both states
-- **Shareable URLs conflict with privacy-first:** If URLs encode data, ensure it's client-side only (fragment-based, not query params that hit logs)
-- **Context-aware validation requires chain-specific validators:** x402's address validation needs separate logic for EVM vs Solana vs other chains
-- **Keyboard shortcuts enhance all actions:** Once implemented, can be applied to validate, clear, copy, load example
+1. **Error codes (TS-2) are foundational** -- every other feature references them. Build first.
+2. **detect() (TS-5) is independently useful** and a prerequisite for validate() and normalize().
+3. **Strict mode (DF-4) is a thin wrapper** -- build after errors/warnings distinction works.
+4. **Chain/asset registries (DF-6, DF-8) are data, not logic** -- can be built in parallel with validation rules.
+5. **normalize() (DF-3) and validate() (TS-1) share detection logic** -- detect() is the shared foundation.
 
-## MVP Definition
+---
 
-### Launch With (v1)
+## MVP Recommendation
 
-Minimum viable product — what's needed to validate x402 configs.
+### Phase 1: Foundation (Must Ship)
 
-- [x] **URL and JSON input methods** — Already decided; table stakes
-- [x] **Real-time validation against x402 spec** — Core value prop
-- [x] **Clear error messages with line numbers** — Table stakes; must include
-- [x] **Required/optional field validation** — Already decided
-- [x] **Chain-specific address validation (EVM, Solana)** — Already decided; differentiator
-- [x] **Chain/asset combination validation** — Already decided; differentiator
-- [x] **Error vs warning distinction** — Already decided; differentiator
-- [x] **Load example button** — Already decided; differentiator
-- [x] **Show raw JSON toggle** — Already decided; differentiator
-- [ ] **Success confirmation message** — Table stakes; add explicit "Valid x402 config" message
-- [ ] **Copy to clipboard button** — Table stakes; users need to move validated JSON
-- [ ] **Format/beautify output** — Table stakes; make validated JSON readable
-- [ ] **Privacy-first client-side validation** — Differentiator; no backend, everything in browser
+All table stakes features (TS-1 through TS-8) plus these differentiators:
 
-### Add After Validation (v1.x)
+1. **TS-1: validate() with structured results** -- the core API
+2. **TS-2: Machine-readable error codes** -- stable API for programmatic consumers
+3. **TS-3: Field paths** -- locate errors in the config
+4. **TS-4: Human messages** -- developer-readable output
+5. **TS-5: detect()** -- format identification
+6. **TS-6: TypeScript types** -- first-class TS support
+7. **TS-7: String/object input** -- flexible input handling
+8. **TS-8: Layered validation** -- sensible error ordering
+9. **DF-1: Fix suggestions** -- the primary differentiator
+10. **DF-2: Errors vs warnings** -- severity distinction
+11. **DF-3: normalize()** -- format conversion
+12. **DF-5: Spec-aware detection** -- x402-specific intelligence
 
-Features to add once core is working and users provide feedback.
+### Phase 2: Enhancement (Ship Shortly After)
 
-- [ ] **Shareable validation URLs** — Nice to have for sharing with teammates; add when sharing patterns emerge
-- [ ] **Keyboard shortcuts** — Power user feature; add after basic UX is polished
-- [ ] **More chain types** — Add Bitcoin, Polygon, etc. as x402 spec expands
-- [ ] **Export validated JSON to file** — Alternative to copy/paste; add if users request
-- [ ] **Local storage for last validation** — Convenience feature; persist input across page reloads
-- [ ] **Progressive disclosure for advanced options** — Useful if settings grow beyond simple toggles
+13. **DF-4: Strict mode** -- CI/CD enforcement (low effort, high value)
+14. **DF-6: Extensible chain registry** -- community contribution path
+15. **DF-7: Normalized result in validate()** -- convenience API
+16. **DF-8: Asset registry** -- known asset validation
 
-### Future Consideration (v2+)
+### Defer Indefinitely
 
-Features to defer until product-market fit is established.
+All anti-features (AF-1 through AF-8). These represent scope that belongs elsewhere or adds complexity without proportionate value.
 
-- [ ] **Batch validation** — Out of scope for v1; requires significant UX/architecture changes
-- [ ] **CLI version** — Different audience; separate tool
-- [ ] **Browser extension** — Validate in-page x402 headers; requires extension development
-- [ ] **API for programmatic validation** — Backend-dependent; conflicts with privacy-first approach unless self-hosted
-- [ ] **Custom chain/asset definitions** — Advanced users can fork; don't build rules engine
+---
 
-## Feature Prioritization Matrix
+## Patterns from Real Validation Libraries
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Real-time validation | HIGH | LOW | P1 (Done) |
-| Error messages with line numbers | HIGH | LOW | P1 (Done) |
-| Chain-specific validation | HIGH | MEDIUM | P1 (Done) |
-| Success confirmation | HIGH | LOW | P1 |
-| Copy to clipboard | HIGH | LOW | P1 |
-| Format/beautify | HIGH | LOW | P1 |
-| Example templates | MEDIUM | LOW | P1 (Done) |
-| Show raw JSON | MEDIUM | LOW | P1 (Done) |
-| Error vs warning distinction | MEDIUM | MEDIUM | P1 (Done) |
-| Privacy-first client-side | MEDIUM | LOW | P1 |
-| Shareable URLs | MEDIUM | MEDIUM | P2 |
-| Keyboard shortcuts | MEDIUM | MEDIUM | P2 |
-| Export to file | LOW | LOW | P2 |
-| Local storage persistence | LOW | LOW | P2 |
-| Batch validation | LOW | HIGH | P3 |
-| Dark mode | LOW | MEDIUM | P3 |
+### Pattern 1: Zod's safeParse() -- The Gold Standard
 
-**Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
+```typescript
+// Zod pattern (what consumers expect)
+const result = schema.safeParse(data);
+if (!result.success) {
+  result.error.issues.forEach(issue => {
+    console.log(issue.code);    // 'invalid_type'
+    console.log(issue.path);    // ['accepts', 0, 'network']
+    console.log(issue.message); // 'Expected string, received number'
+  });
+}
 
-## Validation Tool UX Best Practices (2026)
+// x402check equivalent
+const result = validate(config);
+if (!result.valid) {
+  result.errors.forEach(issue => {
+    console.log(issue.code);    // 'INVALID_NETWORK_FORMAT'
+    console.log(issue.field);   // 'accepts[0].network'
+    console.log(issue.message); // 'Network must use CAIP-2 format'
+    console.log(issue.fix);     // 'Use "eip155:8453" instead of "base"'
+  });
+}
+```
 
-Based on research into JSON validators, schema checkers, and linting tools:
+### Pattern 2: Ajv's Strict Mode -- Configurable Severity
 
-### Error Messaging Best Practices
+```typescript
+// Ajv pattern
+const ajv = new Ajv({ strict: true });     // throws on violations
+const ajv = new Ajv({ strict: "log" });    // warns on violations
+const ajv = new Ajv({ strict: false });    // ignores violations
 
-1. **Be specific, not vague** — "Invalid input" is useless; "Missing required field 'address' in payment_methods[0]" is actionable
-2. **Explain what AND why AND how** — "Required field missing (spec requires it). Add an 'address' field with a valid blockchain address."
-3. **Avoid technical jargon** — Speak the user's language; "Invalid schema" → "This field doesn't match the x402 format"
-4. **Show errors inline when possible** — Point to the exact line/field with the issue
-5. **Don't validate before user finishes typing** — Wait for blur event or 500ms pause
-6. **Make errors dismissible** — Once fixed, error should disappear immediately
-7. **Avoid "pogo-ing"** — Don't push content down when errors appear; use fixed-height error zones or overlays
-8. **Use icons + color** — Don't rely on color alone (accessibility); include ✓/✗ icons
-9. **Group related errors** — If multiple fields in an object are wrong, group the messages
-10. **Positive feedback matters** — When valid, show a clear success state, not just absence of errors
+// x402check equivalent
+const result = validate(config, { strict: true });  // warnings become errors
+const result = validate(config);                     // default: warnings stay warnings
+```
 
-### Input/Output UX Patterns
+### Pattern 3: libphonenumber-js -- Detect/Validate/Normalize Trifecta
 
-1. **Default to paste mode** — Most users have content on clipboard already
-2. **Auto-detect input type** — If user pastes URL, fetch it; if JSON, validate directly
-3. **Preserve user input** — Don't overwrite on validation; show formatted version separately
-4. **One-click copy** — "Copy to clipboard" should be prominent and instant feedback on success
-5. **Debounce validation** — Don't validate on every keystroke; 500ms delay is standard
-6. **Show loading states** — When fetching URL or validating, show spinner/progress
-7. **Clear/reset button** — Easy way to start over without refreshing page
-8. **Responsive textarea** — Auto-expand as content grows; don't force scrolling in tiny box
+```typescript
+// libphonenumber-js pattern
+const phone = parsePhoneNumber('+14155552671');
+phone.isValid();              // validate
+phone.country;                // detect
+phone.formatInternational();  // normalize
 
-### Accessibility Patterns
+// x402check equivalent
+detect(config);               // 'v2' | 'v1' | 'flat-legacy' | 'unknown'
+validate(config);             // { valid, errors, warnings, normalized }
+normalize(config);            // canonical v2 shape or null
+```
 
-1. **Keyboard navigation** — All actions reachable via Tab, Enter, Escape
-2. **Screen reader support** — ARIA labels, error announcements, semantic HTML
-3. **Focus management** — After validation, focus first error or success message
-4. **Sufficient color contrast** — WCAG AA minimum for text and interactive elements
-5. **Error announcements** — Use aria-live regions so screen readers detect new errors
-6. **Skip to content** — For keyboard users to bypass navigation
+### Pattern 4: multicoin-address-validator -- Chain-Type Extensibility
 
-## Competitor Feature Analysis
+```typescript
+// multicoin-address-validator pattern
+WAValidator.validate(address, 'UNKNOWN_TOKEN', { chainType: 'ethereum' });
 
-| Feature | JSONLint | JSON Schema Validator | TestSprite | Our Approach (x402check) |
-|---------|----------|----------------------|------------|--------------------------|
-| Input methods | Paste, URL, type | Paste, file upload | Paste, file, URL | Paste, URL (v1) — matches best practices |
-| Real-time validation | Yes | Yes | Yes | Yes — table stakes |
-| Error line numbers | Yes | Yes | Yes | Yes — table stakes |
-| Syntax highlighting | Yes | Yes | Yes | Yes — table stakes |
-| Format/beautify | Yes | Yes | Yes | Yes — table stakes |
-| Copy to clipboard | Yes | Yes | Yes | Yes — adding for v1 |
-| Domain-specific validation | No (generic JSON) | No (generic schema) | Yes (customizable) | Yes (x402 spec, chain addresses) — differentiator |
-| Example templates | Yes | No | Yes | Yes — already decided |
-| Error vs warning | No | Yes (schema levels) | Yes | Yes — already decided |
-| Shareable URLs | Yes | No | Yes | v2 consideration |
-| Batch validation | No | No | Yes | Out of scope — anti-feature for v1 |
-| Client-side only | Yes | Varies | No | Yes — privacy differentiator |
+// x402check equivalent -- validate by CAIP-2 namespace
+// Built-in: 'eip155:8453' -> uses EVM address validation
+// Unknown: 'eip155:99999' -> still uses EVM rules (same namespace)
+// Custom: validate(config, { networkValidators: { 'mychain': myValidator } })
+```
 
-### What x402check Does Differently
+### Pattern 5: ESLint -- Error vs Warning Severity
 
-**Strengths:**
-1. **Domain-specific validation** — x402 spec knowledge (chain/asset combos, address formats) vs generic JSON validation
-2. **Clear error/warning distinction** — Helps users prioritize what's blocking vs best practices
-3. **Privacy-first** — All validation client-side; no data sent to servers
-4. **Opinionated for x402** — Not trying to be general-purpose; focused on one use case
+```typescript
+// ESLint pattern
+// "semi": "error"   -> fails CI
+// "semi": "warn"    -> reported but passes
+// "semi": "off"     -> ignored
 
-**What we match (table stakes):**
-- Real-time validation, syntax highlighting, error line numbers, format/beautify, copy to clipboard
+// x402check equivalent
+// MISSING_PAY_TO: always error (config will fail)
+// FLAT_FORMAT: always warning (config works, but suboptimal)
+// strict: true -> all warnings become errors
+```
 
-**What we intentionally skip (anti-features):**
-- Batch validation, user accounts, custom rules, live endpoint testing
+---
+
+## Complexity Summary
+
+| Feature | Complexity | Effort Estimate | Notes |
+|---------|-----------|-----------------|-------|
+| TS-1: validate() | MEDIUM | 2-3 days | Core orchestration of all rules |
+| TS-2: Error codes | LOW | 0.5 days | Type definitions + constants |
+| TS-3: Field paths | LOW | 0.5 days | Thread path through rules |
+| TS-4: Messages | LOW | 1 day | Write ~25 message templates |
+| TS-5: detect() | LOW | 0.5 days | Simple decision tree |
+| TS-6: TypeScript types | LOW | 1 day | Interfaces + exports |
+| TS-7: String/object input | LOW | 0.5 days | JSON.parse wrapper |
+| TS-8: Layered validation | MEDIUM | 2 days | 5 rule layers, short-circuit logic |
+| DF-1: Fix suggestions | MEDIUM | 1-2 days | Per-error inference logic |
+| DF-2: Errors vs warnings | LOW | 0.5 days | Severity field on issues |
+| DF-3: normalize() | MEDIUM | 2 days | Format-specific mapping logic |
+| DF-4: Strict mode | LOW | 0.5 days | Post-process wrapper |
+| DF-5: Spec-aware detection | LOW | 0.5 days | Already partially built |
+| DF-6: Chain registry | MEDIUM | 1-2 days | Registry data structure + CAIP-2 parser |
+| DF-7: Normalized in result | LOW | 0.5 days | Call normalize() inside validate() |
+| DF-8: Asset registry | LOW | 0.5 days | Static lookup table |
+
+**Total estimated effort:** 14-17 developer-days for all features
+
+---
 
 ## Sources
 
-**JSON Validator Tools & Features:**
-- [JSONLint - The JSON Validator](https://jsonlint.com)
-- [Best JSON Formatter and JSON Validator](https://jsonformatter.org/)
-- [JSON Editor Online](https://jsoneditoronline.org/)
-- [Ultimate Guide - The Best Schema Checker Tools of 2026](https://www.testsprite.com/use-cases/en/the-best-schema-checker-tools)
-- [JSON Toolset](https://www.jsontoolset.com/)
+**Validation Library API Patterns:**
+- [Zod - TypeScript-first schema validation](https://zod.dev/) -- safeParse(), ZodIssue structure, error customization [HIGH confidence]
+- [Zod error formatting](https://zod.dev/error-formatting) -- treeifyError, issue path semantics [HIGH confidence]
+- [Ajv JSON Schema validator - strict mode](https://ajv.js.org/strict-mode.html) -- strict: true/false/"log" pattern [HIGH confidence]
+- [Ajv options](https://ajv.js.org/options.html) -- allErrors, verbose error reporting [HIGH confidence]
+- [Valibot - modular schema library](https://valibot.dev/) -- parse/safeParse/is pattern, tree-shaking [HIGH confidence]
 
-**Error Message UX Best Practices:**
-- [Error Message UX, Handling & Feedback - Pencil & Paper](https://www.pencilandpaper.io/articles/ux-pattern-analysis-error-feedback)
-- [Building UX for Error Validation Strategy - Medium](https://medium.com/@olamishina/building-ux-for-error-validation-strategy-36142991017a)
-- [10 Design Guidelines for Reporting Errors in Forms - NN/G](https://www.nngroup.com/articles/errors-forms-design-guidelines/)
-- [Designing Better Error Messages UX - Smashing Magazine](https://www.smashingmagazine.com/2022/08/error-messages-ux-design/)
-- [Accessible Form Validation Best Practices - UXPin](https://www.uxpin.com/studio/blog/accessible-form-validation-best-practices/)
+**Blockchain Address Validation:**
+- [multicoin-address-validator on npm](https://www.npmjs.com/package/multicoin-address-validator) -- chainType extensibility pattern [HIGH confidence]
+- [bitcoin-address-validation on npm](https://www.npmjs.com/package/bitcoin-address-validation) -- validate + getAddressInfo pattern [HIGH confidence]
 
-**Developer Tool UX & Linting:**
-- [6 things developer tools must have in 2026 - Evil Martians](https://evilmartians.com/chronicles/six-things-developer-tools-must-have-to-earn-trust-and-adoption)
-- [The Ultimate Guide to Code Linting - Bee Web Dev](https://beeweb.dev/blog/post.php?slug=the-ultimate-guide-to-code-linting-10-essential-tools-every-developer-should-know)
-- [Top Developer Experience Tools 2026 - Typo](https://typoapp.io/blog/top-developer-experience-tools-2026-dx)
+**x402 Protocol Specification:**
+- [coinbase/x402 GitHub](https://github.com/coinbase/x402) -- PaymentRequirements type definitions, spec structure [HIGH confidence]
+- [x402 V2 Launch Announcement](https://www.x402.org/writing/x402-v2-launch) -- v1 vs v2 differences, CAIP-2 adoption [HIGH confidence]
+- [Coinbase Developer Documentation - x402](https://docs.cdp.coinbase.com/x402/welcome) -- official SDK types and usage [HIGH confidence]
+- [CAIP-2 Specification](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-2.md) -- namespace:reference format [HIGH confidence]
 
-**Validation Tool Features:**
-- [Schema validation - Cloudflare API Shield](https://developers.cloudflare.com/api-shield/security/schema-validation/)
-- [How API Schema Validation Boosts Effective Contract Testing - Zuplo](https://zuplo.com/learning-center/how-api-schema-validation-boosts-effective-contract-testing)
-- [Schema Validation in API Testing - Testsigma](https://testsigma.com/blog/schema-validation-in-api-testing/)
+**Phone Number Validation (detect/validate/normalize trifecta):**
+- [libphonenumber-js on npm](https://www.npmjs.com/package/libphonenumber-js) -- parsePhoneNumber, isValid, formatInternational [HIGH confidence]
 
-**Keyboard Shortcuts & Accessibility:**
-- [Keyboard Shortcuts for Accessibility Insights](https://accessibilityinsights.io/docs/web/reference/keyboard/)
-- [WebAIM: Keyboard Accessibility](https://webaim.org/techniques/keyboard/)
-- [Top Web Accessibility Tools Available In 2026 - accessiBe](https://accessibe.com/blog/knowledgebase/top-web-accessibility-tools)
-
-**Clipboard & Sharing Features:**
-- [Unblocking clipboard access - web.dev](https://web.dev/async-clipboard/)
-- [Clipboard API - MDN](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard_API)
-- [clipboard.js - Copy to clipboard without Flash](https://clipboardjs.com/)
-
-**User Pain Points & Anti-Features:**
-- [5 Mistakes To Avoid With Form Design - ArcTouch](https://arctouch.com/blog/5-mistakes-avoid-form-design)
-- [What Users Hate About Your Web Forms - EmailMeForm](https://www.emailmeform.com/blog/why-users-hate-web-forms.html)
-- [Usability Testing of Inline Form Validation - Baymard](https://baymard.com/blog/inline-form-validation)
-- [What Is Feature Bloat And How To Avoid It - Userpilot](https://userpilot.com/blog/feature-bloat/)
-- [What is Feature Creep and How to Avoid It - Designli](https://designli.co/blog/what-is-feature-creep-and-how-to-avoid-it)
-
-**Simplicity vs Complexity:**
-- [12 Innovative SaaS Ideas to Launch in 2026 - SaaS Validation](https://www.saasvalidation.tech/saas-ideas/)
-- [Feature Bloat: The Silent Product Killer - Sonin](https://sonin.agency/insights/feature-bloat-the-silent-product-killer/)
+**TypeScript Patterns:**
+- [Discriminated Unions in TypeScript](https://dev.to/tigawanna/understanding-discriminated-unions-in-typescript-1n0h) -- Result pattern for type-safe errors [MEDIUM confidence]
+- [ESLint Rule Configuration](https://eslint.org/docs/latest/use/configure/rules) -- error/warn/off severity pattern [HIGH confidence]
+- [fastest-validator plugin pattern](https://github.com/icebob/fastest-validator) -- v.plugin() extensibility [MEDIUM confidence]
 
 ---
-*Feature research for: x402check payment validator*
-*Researched: 2026-01-22*
-*Confidence: HIGH (Context7 not needed for feature research; relied on WebSearch for UX patterns + official tool documentation)*
+*Feature research for: x402check SDK (v2.0 milestone)*
+*Researched: 2026-01-29*
+*Confidence: HIGH (patterns verified against official library documentation and x402 spec)*

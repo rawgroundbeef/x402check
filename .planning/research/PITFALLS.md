@@ -1,363 +1,459 @@
-# Pitfalls Research
+# Domain Pitfalls: x402check SDK Extraction
 
-**Domain:** Web-based blockchain address validation tool (plain HTML/JS, Cloudflare Worker proxy)
-**Researched:** 2026-01-22
-**Confidence:** HIGH
+**Domain:** Extracting validation logic from a plain HTML/JS website into a standalone TypeScript npm package with zero runtime deps, vendored crypto, and UMD browser bundle
+**Researched:** 2026-01-29
+**Confidence:** HIGH (verified against official specs, real tsup/esbuild issues, and EIP-55 reference implementation)
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Client-Side Validation Only (Trust Without Verification)
-
-**What goes wrong:**
-Developers implement validation logic only in the browser, assuming client-side checks are sufficient for a "read-only" validator tool. The tool appears to work but fails silently on edge cases, provides incorrect validation results, or misses security vulnerabilities like address poisoning attacks.
-
-**Why it happens:**
-For developer tools that don't store data, there's a temptation to skip server-side validation entirely. "It's just a validator, what could go wrong?" mindset leads to trusting browser-only logic. As of 2026, attackers can easily bypass client-side validation using browser developer tools, proxies like Burp Suite, or custom scripts.
-
-**How to avoid:**
-- Implement validation logic in both the Cloudflare Worker (server-side) AND the browser (UX)
-- Client-side validates for instant feedback; Worker validates for accuracy
-- Cross-verify checksum validation logic (EIP-55 for Ethereum, Base58Check for Bitcoin)
-- Never trust user input even in "harmless" tools
-
-**Warning signs:**
-- Validation logic only exists in HTML/JS files
-- No validation logic in Worker proxy
-- Tests only run against browser code
-- Address checksum validation not implemented or not cross-checked
-
-**Phase to address:**
-Phase 1 (Core Validation) — establish dual validation pattern from the start
+Mistakes that cause incorrect validation results, broken packages, or rewrites.
 
 ---
 
-### Pitfall 2: CORS Proxy Error Swallowing
+### Pitfall 1: Keccak-256 vs SHA-3 Confusion in Vendored EIP-55 Implementation
 
 **What goes wrong:**
-The Cloudflare Worker proxy catches errors but returns generic 500 responses or swallows errors entirely. Users see "Request failed" without knowing if it's a network issue, invalid facilitator URL, rate limiting, or a configuration error. Debugging becomes impossible.
+The vendored keccak256 implementation uses SHA-3 (the NIST-finalized standard) instead of Keccak-256 (the pre-NIST original). These produce completely different hashes. Every EVM address checksum computed with the wrong algorithm will be silently wrong -- some addresses will incorrectly pass, others will incorrectly fail. The validator becomes actively dangerous: it tells users their correctly checksummed addresses are wrong, or worse, tells them typo'd addresses are correct.
 
 **Why it happens:**
-Developers handle OPTIONS preflight correctly but forget comprehensive error handling for the actual proxied requests. Error responses from facilitator APIs are lost or transformed into generic HTTP errors. As found in 2026 research, the most common mistake is setting CORS headers correctly but failing to preserve error context through the proxy chain.
+Ethereum adopted Keccak-256 before NIST finalized SHA-3. NIST changed the padding scheme, so SHA-3-256 and Keccak-256 produce different outputs for the same input. Many libraries and documentation use "SHA-3" and "Keccak" interchangeably, which is incorrect. The current website uses `ethers.utils.getAddress()` which handles this correctly under the hood -- when replacing it with a vendored implementation, this distinction must be explicitly understood.
 
-**How to avoid:**
-- Preserve original error status codes and messages through the proxy
-- Distinguish between network errors, CORS issues, and facilitator API errors
-- Return structured error responses: `{type: "network|cors|api|validation", message: "", details: {}}`
-- Log errors in Worker for debugging (use `console.error` which appears in Cloudflare Dashboard)
+**Consequences:**
+- Silent data corruption: checksums validate/invalidate incorrectly
+- Users told their valid addresses are invalid (false negatives drive users away)
+- Users told invalid addresses are valid (false positives could contribute to fund loss)
+- Bug is invisible unless you test against known EIP-55 test vectors
 
-**Warning signs:**
-- All errors return the same status code
-- Error messages don't distinguish between error types
-- Can't debug facilitator API issues from browser console
-- No error logging in Worker (Cloudflare Dashboard shows nothing)
+**Prevention:**
+1. Use a known-correct library for the keccak256 primitive. `js-sha3` (emn178/js-sha3) is zero-dependency, ~500 lines, MIT licensed, and explicitly provides `keccak_256` separate from `sha3_256`. It is the strongest candidate for vendoring or bundling.
+2. NEVER use a library function named `sha3()` or `sha3_256()` for EIP-55. Always use the function explicitly named `keccak256` or `keccak_256`.
+3. Add a canary test: hash an empty string and assert the result equals `c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470`. If it equals `a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a`, you are using SHA-3, not Keccak.
+4. Hash the lowercase hex address string (ASCII bytes, without `0x` prefix). A common sub-bug is hashing the binary address bytes instead of the ASCII hex characters.
 
-**Phase to address:**
-Phase 1 (Core Validation) — error handling architecture must be established early
+**Detection:**
+- Run the empty-string canary test in CI
+- Test against EIP-55 reference test vectors from the official spec
+- Compare output against `ethers.utils.getAddress()` for a corpus of 100+ real addresses
+
+**Which phase should address it:**
+Phase 1 (Core crypto vendoring) -- this is the very first thing to get right, before any validation logic is built on top.
+
+**Confidence:** HIGH -- verified against [EIP-55 specification](https://eips.ethereum.org/EIPS/eip-55) and [SHA3 vs Keccak-256 documentation](https://ethereumclassic.org/blog/2017-02-10-keccak/)
 
 ---
 
-### Pitfall 3: Vanilla JS State Spaghetti
+### Pitfall 2: Base58 Leading Zeros Bug in Vendored Solana Address Decoder
 
 **What goes wrong:**
-Without a framework, state management devolves into DOM manipulation mixed with business logic. Global variables proliferate. Event handlers directly modify the DOM. Debugging becomes "console.log archaeology." Adding features requires untangling spaghetti code.
+The vendored Base58 decoder fails to preserve leading zero bytes. In Base58, each leading `1` character represents a `0x00` byte. A decoder that only does the BigInt division but skips the leading-`1` counting step will produce output that is shorter than expected, causing valid Solana addresses to fail the 32-byte length check.
 
 **Why it happens:**
-Plain HTML/JS starts simple but grows organically without structure. "Just add an onclick handler" seems fine until you have 12 handlers all manipulating the same UI elements. Modern research from 2026 shows the common mistake is "using DOM as source of truth" — tightly coupling logic to HTML structure.
+Base58 is not a simple base conversion. The `1` character (value 0) at the start of the encoded string represents zero bytes that would be lost in a pure mathematical base conversion. This is the single most common bug in hand-rolled Base58 decoders. The current website uses regex-only validation (`/^[1-9A-HJ-NP-Za-km-z]{32,44}$/`) and loads `bs58@6.0.0` from CDN but does not actually decode addresses to verify byte length -- the SDK needs to do this properly.
 
-**How to avoid:**
-- Establish state management pattern from day one (even simple Proxy-based reactivity)
-- Separate concerns: state → rendering → DOM updates
-- Use modern patterns like Proxy observers for reactive state (2026 standard)
-- Create clear component boundaries even without framework: ValidationForm, ResultsDisplay, ErrorFeedback
+**Consequences:**
+- Valid Solana addresses starting with `1` characters (representing leading zero bytes) are rejected
+- The 32-byte length check fails for addresses that are actually valid
+- Solana address validation becomes unreliable
 
-**Warning signs:**
-- Event handlers contain DOM manipulation and business logic mixed together
-- Finding state requires searching through DOM with `querySelector`
-- Same validation logic duplicated across multiple handlers
-- Adding a feature requires changing 5+ disconnected files/functions
+**Prevention:**
+1. After BigInt division, count leading `1` characters in the input string and prepend that many `0x00` bytes to the decoded output
+2. Verify decoded output is exactly 32 bytes for Solana public keys
+3. Consider vendoring `base58-js` (~560 bytes, zero deps) rather than writing from scratch -- it handles leading zeros correctly
+4. Test with addresses that have leading `1` characters (they exist in the wild)
+5. Also test with the Solana genesis hash address and well-known program addresses
 
-**Phase to address:**
-Phase 0 (Architecture) — establish patterns before first feature
+**Detection:**
+- Unit test: encode a byte array starting with `[0, 0, 0, ...]`, decode the result, assert roundtrip equality
+- Test the specific address `111111111111111111111111111111` (all 1s) -- should decode to 32 zero bytes
+- Compare decode output against `bs58` library for a corpus of real Solana addresses
+
+**Which phase should address it:**
+Phase 1 (Core crypto vendoring) -- alongside keccak256, this is foundational.
+
+**Confidence:** HIGH -- verified against [Base58 specification](https://ssojet.com/binary-encoding-decoding/base58-in-javascript-in-browser/) and [Solana address validation docs](https://www.npmjs.com/package/@solana/addresses)
 
 ---
 
-### Pitfall 4: Address Checksum Blindness
+### Pitfall 3: tsup Does Not Support UMD Format -- IIFE globalName Export Nesting
 
 **What goes wrong:**
-Tool accepts addresses without checksum validation, or implements checksum incorrectly. Users receive false positives: addresses appear valid but contain typos. In blockchain transactions, this means permanent loss of funds. The validator becomes dangerous rather than helpful.
+The PRD specifies a UMD bundle at `dist/x402check.umd.js` that exposes `window.x402Validate`. tsup does not support UMD format. It supports `iife` (IIFE), which is close but has a critical difference: with IIFE format and `globalName: 'x402Validate'`, the exports are nested as properties on the global object. So `window.x402Validate` becomes `{ validate: fn, detect: fn, normalize: fn }` -- but the website code expects `const { validate, detect, normalize } = window.x402Validate`, which actually works for this shape. The real problem is that default exports behave unexpectedly: if you use `export default`, the global becomes `{ default: fn, __esModule: true }` and you must access `window.x402Validate.default`.
 
 **Why it happens:**
-Developers treat all chains the same or copy-paste validation regex without understanding checksums. Each blockchain has unique addressing schemes: Bitcoin uses Base58Check or Bech32, Ethereum uses EIP-55 checksum (case-sensitive hex), Solana uses Base58. Research from 2026 confirms: "Bitcoin addresses using Base58Check encoding are case-sensitive, where even a single character case change creates a completely different address."
+tsup uses esbuild under the hood, which wraps all exports in an IIFE and assigns them to the globalName as an object. There is no option to destructure exports directly onto `window`. This is a [known limitation](https://github.com/egoist/tsup/issues/1290) with no native fix. Developers who test only with ESM imports never discover this because the issue only manifests in `<script>` tag usage.
 
-**How to avoid:**
-- Use established libraries: `multicoin-address-validator` (npm, v0.5.26+) supports multiple chains
-- For Ethereum: implement EIP-55 checksum validation (Keccak-256 hash determines capitalization)
-- For Bitcoin: verify Base58Check or Bech32 checksum depending on address type
-- For Solana: validate Base58 encoding and length (32-44 chars)
-- Test with known valid/invalid addresses for each chain
+**Consequences:**
+- Website integration breaks silently -- `window.x402Validate` exists but doesn't work as expected
+- Hours of debugging why the browser bundle "doesn't export anything"
+- May ship a broken CDN bundle that works in tests but fails in production
 
-**Warning signs:**
-- Address validation is just regex checking format
-- No checksum verification implemented
-- All chains use the same validation logic
-- Mixed-case Ethereum addresses always pass regardless of checksum
+**Prevention:**
+1. Do NOT use `export default` in the SDK's entry point. Use only named exports: `export { validate, detect, normalize }`. Named exports map cleanly to IIFE globalName properties.
+2. Configure tsup with `format: ['esm', 'cjs', 'iife']`, `globalName: 'x402Validate'`, and `platform: 'browser'` for the IIFE build.
+3. The website code `const { validate, detect, normalize } = window.x402Validate;` will work correctly with named exports under IIFE.
+4. If UMD is truly needed (for AMD/RequireJS compatibility), add a separate Rollup build step or use `tsdown` (tsup successor) which supports UMD natively. For this project, IIFE is sufficient since the only browser consumer is a `<script>` tag.
+5. Add an integration test that loads the IIFE bundle in a headless browser (or jsdom) and verifies `window.x402Validate.validate` is a function.
 
-**Phase to address:**
-Phase 1 (Core Validation) — checksum validation is NOT optional
+**Detection:**
+- Build the IIFE bundle, load it in a browser console, check `typeof window.x402Validate.validate === 'function'`
+- If it logs `undefined`, you have the export nesting problem
+- CI test: load bundle in jsdom and assert exports exist
+
+**Which phase should address it:**
+Phase 2 (Build system setup) -- must be validated before website integration phase.
+
+**Confidence:** HIGH -- verified against [tsup issue #924](https://github.com/egoist/tsup/issues/924) and [tsup issue #1290](https://github.com/egoist/tsup/issues/1290)
 
 ---
 
-### Pitfall 5: Missing Loading States = Perceived Bugs
+### Pitfall 4: package.json `exports` Types Resolution Breaks for Consumers
 
 **What goes wrong:**
-User clicks "Validate," nothing happens for 3 seconds, user clicks again (double submission), or assumes tool is broken. Network requests happen invisibly. Users don't know if the tool is working or frozen.
+The published package works when imported, but TypeScript consumers get "Could not find a declaration file for module 'x402check'" or types resolve to `any`. The package appears broken even though the JavaScript works fine. This affects developer trust and adoption.
 
 **Why it happens:**
-Developers focus on success/error states but forget the in-between. Adding a spinner feels like "polish" so it gets deprioritized. However, 2026 UX research confirms: for wait times 2-10 seconds, users perceive missing loading indicators as bugs, not slowness.
+TypeScript has multiple module resolution strategies (`Node`, `Node16`, `NodeNext`, `Bundler`) and each one interacts differently with the `exports` field in package.json. The most common mistakes:
 
-**How to avoid:**
-- Show loading state immediately on user action
-- Disable form during validation (prevent double submission)
-- For < 1 second: no indicator needed
-- For 1-3 seconds: simple spinner or skeleton
-- For 3-10 seconds: spinner with message ("Validating addresses...")
-- For > 10 seconds: progress indication or cancel button
+1. Putting `"types"` after `"default"` in conditional exports (TypeScript stops at the first matching condition)
+2. Not including separate `.d.mts` files for ESM consumers under `Node16`/`NodeNext` resolution
+3. Having a top-level `"types"` field that conflicts with the `"exports"` field
+4. Using `moduleResolution: "Node"` in the SDK's own tsconfig, which does not support the `exports` field at all
 
-**Warning signs:**
-- No visual feedback between click and result
-- Users report "it's not working" when it's actually loading
-- Double submissions occur
-- Console shows multiple identical requests
+**Consequences:**
+- TypeScript consumers get no types or wrong types
+- Consumers using `moduleResolution: "Node16"` (increasingly common) see different behavior than `"Bundler"` consumers
+- Hard to diagnose because it works for the author but fails for specific consumer configurations
 
-**Phase to address:**
-Phase 2 (UX Refinement) — after validation works but before public release
+**Prevention:**
+1. Structure `exports` with `types` FIRST in each condition block:
+   ```json
+   {
+     "exports": {
+       ".": {
+         "import": {
+           "types": "./dist/index.d.mts",
+           "default": "./dist/index.mjs"
+         },
+         "require": {
+           "types": "./dist/index.d.ts",
+           "default": "./dist/index.cjs"
+         }
+       }
+     }
+   }
+   ```
+2. Generate BOTH `.d.ts` (CJS) and `.d.mts` (ESM) declaration files. tsup's `--dts` flag handles this when `format` includes both `esm` and `cjs`.
+3. Keep top-level `"types"`, `"main"`, and `"module"` fields as fallbacks for legacy resolution.
+4. Run `npx @arethetypeswrong/cli --pack .` before every publish to catch resolution issues.
+5. Run `npx publint` to validate package.json entry points.
+6. Test imports under `node10`, `node16`, and `bundler` resolution modes.
+
+**Detection:**
+- `npx @arethetypeswrong/cli --pack .` reports no errors across all resolution modes
+- Create a test consumer project with `moduleResolution: "Node16"` and verify `import { validate } from 'x402check'` resolves types
+- `npx publint` reports no issues
+
+**Which phase should address it:**
+Phase 3 (Package configuration and publishing) -- but the exports structure should be planned from Phase 2.
+
+**Confidence:** HIGH -- verified against [TypeScript ESM/CJS publishing guide](https://lirantal.com/blog/typescript-in-2025-with-esm-and-cjs-npm-publishing) and [@arethetypeswrong documentation](https://github.com/arethetypeswrong/arethetypeswrong.github.io)
 
 ---
 
-### Pitfall 6: Cryptic Error Messages
+## Moderate Pitfalls
 
-**What goes wrong:**
-Errors display as "Error 4.7 occurred" or "Invalid input" without context. Users don't know which field is wrong, why it's wrong, or how to fix it. Technical jargon alienates non-developers. Users abandon the tool.
-
-**Why it happens:**
-Developers write error messages for themselves, not users. Errors from facilitator APIs are passed directly to UI. Validation errors don't specify which part of the configuration failed. 2026 UX research emphasizes: "Avoid bombarding users with technical jargon that they won't understand" and "Validation messages should clearly state what went wrong and possibly why, plus the next step."
-
-**How to avoid:**
-- Transform technical errors into user-friendly messages
-- Be specific: "Ethereum address is invalid (checksum failed)" not "Invalid address"
-- Include fix suggestions: "Expected format: 0x... (42 characters)"
-- For chain-specific errors: "This chain doesn't support asset XYZ. Supported: [list]"
-- Highlight the problematic field in the UI
-- Never blame the user ("You entered an invalid address" → "Address format not recognized")
-
-**Warning signs:**
-- Error messages contain error codes without explanations
-- Same error message for different problems
-- No indication of which field/line is problematic
-- Users ask "what does this error mean?"
-
-**Phase to address:**
-Phase 2 (UX Refinement) — error message quality affects trust and adoption
+Mistakes that cause delays, broken integrations, or significant rework.
 
 ---
 
-### Pitfall 7: Race Conditions in Async Validation
+### Pitfall 5: .gitignore Silently Excludes dist/ from npm Publish
 
 **What goes wrong:**
-User types in address field, validation fires, user changes address before first validation completes, results display wrong validation status. Fast typers see validation results from previous inputs. Multi-field validation shows inconsistent states.
+`npm publish` produces a package with no `dist/` directory. The package installs fine but every import fails with "Cannot find module." This is the single most common reason published npm packages are broken on first publish.
 
 **Why it happens:**
-Without frameworks, async state management is manual. Each keypress or field change triggers validation without canceling previous requests. Responses arrive out of order. The 2026 research on vanilla JS patterns warns: "race conditions during navigation" occur when "a user clicks while a page is loading and creates mixed content."
+`dist/` is in `.gitignore` (correctly -- build artifacts should not be committed). When `package.json` has no `files` field, npm falls back to `.gitignore` to determine what to exclude. Since `dist/` is gitignored, it gets excluded from the published tarball. The developer runs `npm publish`, it succeeds, but the package is empty.
 
-**How to avoid:**
-- Use AbortController to cancel in-flight requests when new input arrives
-- Implement debouncing (wait for user to stop typing before validating)
-- Show "Validating..." state to indicate async operation
-- Store request IDs and ignore stale responses
-- Clear previous results before starting new validation
+**Prevention:**
+1. Always set `"files": ["dist"]` in package.json. This field is an allowlist that overrides `.gitignore`.
+2. Always run `npm pack` and inspect the tarball contents before publishing: `npm pack && tar -tzf x402check-*.tgz`
+3. Add a prepublish check script: `"prepublishOnly": "npm run build && npm pack --dry-run"`
+4. Consider adding `.npmignore` as a belt-and-suspenders approach (but `files` is more reliable).
 
-**Warning signs:**
-- Validation results sometimes don't match current input
-- Rapid typing causes flickering or incorrect results
-- Console shows overlapping fetch requests
-- Users report "validation is confused"
+**Detection:**
+- `npm pack --dry-run` shows whether `dist/` files are included
+- If the tarball is suspiciously small (< 5KB for this project), something is missing
 
-**Phase to address:**
-Phase 1 (Core Validation) — async patterns must be correct from the start
+**Which phase should address it:**
+Phase 3 (Publishing) -- but the `files` field should be set up in Phase 2 when package.json is created.
+
+**Confidence:** HIGH -- verified against [npm documentation](https://jeremyrichardson.dev/blog/why-is-my-dist-directory-missing-from-my-package)
 
 ---
 
-### Pitfall 8: Network Error = Silent Failure
+### Pitfall 6: EIP-55 Checksum Input Encoding -- Hashing Bytes vs ASCII String
 
 **What goes wrong:**
-Facilitator URL is unreachable, user sees nothing or "Unknown error." Tool appears broken. Users don't know if the problem is their config, their network, or the facilitator being down.
+The EIP-55 implementation hashes the raw address bytes (20 bytes) instead of the lowercase ASCII hex string (40 characters). Or it hashes the string WITH the `0x` prefix (42 characters) instead of WITHOUT (40 characters). Both produce completely wrong checksums.
 
 **Why it happens:**
-Fetch API error handling focuses on HTTP errors but forgets network failures. `fetch()` rejects on network errors but not on HTTP 404/500. Developers check `response.ok` but don't catch network exceptions separately. According to 2026 research: "The fetch() function will reject the promise on some errors, but not if the server responds with an error status like 404."
+The EIP-55 spec says "hash the address." Developers interpret this as hashing the binary address data. But the spec means: take the lowercase hex representation (without `0x`), treat it as an ASCII string, and hash those ASCII bytes. The existing `validator.js` delegates to `ethers.utils.getAddress()` which handles this correctly. When replacing with a vendored implementation, this subtle encoding requirement must be replicated exactly.
 
-**How to avoid:**
-- Wrap all fetch calls in try-catch
-- Check both `response.ok` AND catch network exceptions
-- Distinguish error types: `{type: "network"}` vs `{type: "http", status: 500}`
-- Provide user-friendly network error messages: "Cannot reach facilitator (network error). Check URL and internet connection."
-- Consider retry logic with exponential backoff for transient failures
-- Implement timeout using AbortController (e.g., 10 second limit)
+**Prevention:**
+1. The input to keccak256 must be the ASCII bytes of the lowercase hex string WITHOUT `0x` prefix.
+   ```
+   address = "0xAb5801a7D398351b8bE11C439e05C5b3259aec9B"
+   input_to_hash = "ab5801a7d398351b8be11c439e05c5b3259aec9b"  // lowercase, no 0x
+   hash = keccak256(input_to_hash)  // hash the STRING as ASCII bytes
+   ```
+2. Then for each character position i in the address:
+   - If address[i] is a letter AND hash[i] >= 8, uppercase it
+   - If address[i] is a digit, leave it unchanged
+3. Test against the official EIP-55 test vectors from the [specification](https://eips.ethereum.org/EIPS/eip-55), which include:
+   - `0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed`
+   - `0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359`
+   - `0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB`
+   - `0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb`
 
-**Warning signs:**
-- Network errors show generic or no message
-- No distinction between "URL unreachable" and "API returned error"
-- No timeout protection (hangs forever)
-- No retry mechanism for transient failures
+**Detection:**
+- Test all four EIP-55 reference addresses from the spec
+- Test lowercase-only addresses (all lowercase should be accepted as valid without checksum warning)
+- Test UPPERCASE-only addresses (should also be accepted as valid without checksum)
+- Test a single wrong-case character and verify it fails checksum
 
-**Phase to address:**
-Phase 1 (Core Validation) — network resilience is critical for proxy-based tools
+**Which phase should address it:**
+Phase 1 (Core crypto vendoring) -- part of the keccak256/EIP-55 implementation.
+
+**Confidence:** HIGH -- verified against [EIP-55 specification](https://eips.ethereum.org/EIPS/eip-55)
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 7: Website Integration Breaks Because ValidationResult Shape Changed
 
-Shortcuts that seem reasonable but create long-term problems.
+**What goes wrong:**
+The SDK uses a new `ValidationResult` shape (as defined in the PRD: `valid`, `version`, `errors[]`, `warnings[]`, `normalized`) but the existing website's `displayResults()` function expects the old shape (`valid`, `detectedFormat`, `errors[]`, `warnings[]`, `normalized` with `.payments[]` and `._normalizedAmount`). The website loads the new UMD bundle, calls `validate()`, and gets back data it cannot render. The UI shows blank results or crashes with "Cannot read property 'payments' of undefined."
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Skip Cloudflare Worker, validate only client-side | Faster MVP, no Worker deployment | Security holes, can't debug real-world issues, no request logging | Never — Worker is the architecture |
-| Use regex-only address validation | Quick to implement | Misses checksum validation, false positives cause fund loss | Never — checksums prevent disasters |
-| Global variables for state | Simple, no architecture needed | Unmaintainable spaghetti code by Phase 3 | Never — even simple Proxy pattern prevents this |
-| Pass API errors directly to UI | Less code, "authentic" errors | Technical jargon confuses users, poor UX | Only in internal alpha testing |
-| No loading indicators | Faster initial development | Users think tool is broken, poor perceived quality | Only in prototype before user testing |
-| Single generic error message | Easy to implement | Users can't debug their configs | Only in proof-of-concept stage |
-| No debouncing on input validation | Immediate validation feedback | Excessive API calls, rate limiting, poor performance | Only if validation is synchronous/local |
+**Why it happens:**
+The extraction changes the validation result structure to be spec-correct (e.g., `accepts` instead of `payments`, `payTo` instead of `address`, `amount` instead of `minAmount`). The website's rendering code in `index.html` directly references the old field names in multiple places: `validation.detectedFormat`, `validation.normalized.payments[0]`, `p.address`, `p.chain`, `p.minAmount`, `p._normalizedAmount`. All of these will break.
 
-## Integration Gotchas
+**Specific breaking changes from the PRD:**
+- `detectedFormat` -> `version` (string values change: `'v2'` -> `'v2'` but `'flat'` -> `'flat-legacy'`)
+- `normalized.payments` -> `normalized.accepts` (array rename)
+- `payments[i].chain` -> `accepts[i].network` (CAIP-2 format)
+- `payments[i].address` -> `accepts[i].payTo`
+- `payments[i].minAmount` -> `accepts[i].amount`
+- `payments[i].asset` -> `accepts[i].asset` (same name but now may be a contract address)
+- `_normalizedAmount` internal property is removed
+- `generateV2Equivalent()` is removed (normalization is built into `validate()`)
 
-Common mistakes when connecting to external services.
+**Prevention:**
+1. Map every field reference in `index.html` before starting integration. There are at least 15+ direct field references to update.
+2. Consider adding a thin adapter layer in the website code that maps the new SDK shape to the old rendering expectations, rather than rewriting all rendering code at once.
+3. Or, better: update the rendering code to use the new shape, since the website needs to reflect the new spec-correct field names anyway.
+4. Test the full flow: load UMD bundle -> call validate with each example config -> verify all UI sections render correctly.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Facilitator API | Assuming all facilitators return same format | Parse response defensively, handle missing fields gracefully, show raw response on parse failure |
-| Cloudflare Worker CORS | Only handling OPTIONS preflight | Return CORS headers on ALL responses (OPTIONS, GET, POST, errors), use `Access-Control-Allow-Origin: *` for public tool |
-| Chain-specific APIs | Using same validation for all chains | Each chain needs dedicated logic: Ethereum (EIP-55), Bitcoin (Base58Check/Bech32), Solana (Base58 + length check) |
-| JSON parsing | Assuming input is valid JSON | Wrap `JSON.parse()` in try-catch, show line/column of parse error, highlight problematic JSON in UI |
-| Rate limiting | Not handling 429 responses | Detect rate limits, show user-friendly message, implement retry-after delay, consider debouncing |
+**Detection:**
+- Load the website locally with the new UMD bundle substituted for the old scripts
+- Paste each of the four example configs (flat, v1, v2, marketplace) and verify the results render
+- Check browser console for any "Cannot read property" errors
 
-## Performance Traps
+**Which phase should address it:**
+Phase 4 (Website integration) -- this is the core work of the integration phase and must be planned carefully.
 
-Patterns that work at small scale but fail as usage grows.
+**Confidence:** HIGH -- verified by reading the actual `index.html` rendering code and comparing against PRD types.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Validating on every keystroke | UI lags, excessive API calls | Debounce input (300-500ms wait after typing stops), or validate only on blur/submit | 10+ concurrent users hitting Worker |
-| No request cancellation | Stale requests pile up, wrong results display | Use AbortController to cancel in-flight requests when new input arrives | Users typing quickly in address fields |
-| Storing full validation history | Memory grows unbounded | Limit history to last 10-20 validations, or clear on new session | Long sessions with many validations |
-| Re-validating unchanged data | Wasted compute/API calls | Cache validation results by content hash, skip if input hasn't changed | Power users validating similar configs repeatedly |
+---
 
-## Security Mistakes
+### Pitfall 8: Monorepo Workspace Breaks Root-Level Website Serving
 
-Domain-specific security issues beyond general web security.
+**What goes wrong:**
+After restructuring the repo to have `packages/x402check/` as a workspace, the root-level `index.html`, `validator.js`, `chains.js`, and `input.js` stop working or become confusing to maintain. npm/pnpm workspace configuration at the root may interfere with the flat file structure of the website. Running `npm install` at root level installs workspace dependencies but creates unexpected `node_modules` structures.
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Not sanitizing facilitator URLs | SSRF attacks (Worker accesses internal services), XSS if URL reflected in UI | Validate URL format, block private IPs (10.x, 192.168.x, 127.x, localhost), allow only http/https schemes |
-| Trusting client-side validation | Users bypass validation, submit malformed data to Worker | Validate all inputs in Worker, never trust browser-submitted data |
-| No checksum verification | Users enter typo'd addresses, validation passes, funds lost in real usage | Implement proper checksum validation for each chain (EIP-55, Base58Check, Bech32) |
-| Displaying raw API errors | Information leakage (internal URLs, stack traces) | Transform errors before display, log details server-side only, show user-friendly messages |
-| Clipboard malware vulnerability | If tool auto-fills from clipboard, malware can swap addresses | If implementing paste button, show address preview and require user confirmation, warn about clipboard malware |
+**Why it happens:**
+The website is a plain HTML/JS site with no build process -- it just serves static files. Monorepo tooling (npm workspaces, pnpm workspaces) expects packages to be self-contained with their own `package.json`. Adding a root `package.json` with `"workspaces": ["packages/*"]` changes how `npm install` behaves for the entire repo. The website files at root level are not a "package" and may conflict with workspace resolution.
 
-## UX Pitfalls
+**Prevention:**
+1. Keep the monorepo structure minimal. The root `package.json` only needs `"workspaces": ["packages/*"]` and dev scripts. The website files remain at root level unchanged.
+2. Do NOT move website files into a `packages/website/` directory -- they are static HTML that gets served as-is. Overcomplicating the structure adds no value.
+3. The website should continue to load the SDK via CDN `<script>` tag, not via workspace symlinks. The two are decoupled by design.
+4. Add a `.npmrc` or configure the package manager to not hoist the SDK's dev dependencies into the root `node_modules`.
+5. Test that the website still works by opening `index.html` directly in a browser after the monorepo restructuring.
 
-Common user experience mistakes in this domain.
+**Detection:**
+- After restructuring, `open index.html` in a browser and verify it loads without errors
+- Check that `npm install` in the root does not create unexpected files in the website directory
+- Verify `cd packages/x402check && npm test` works independently
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Generic "Invalid" errors | Users don't know what's wrong or how to fix it | Specific errors: "Ethereum address must start with 0x and be 42 characters (currently 40)" |
-| No example configs | Users don't know expected format | Provide "Load Example" button with valid x402 config for each chain type |
-| Validation on every keystroke with no debouncing | Constant error messages while typing, annoying | Validate only on blur or after typing pause (debounce 300-500ms) |
-| Technical jargon in errors | "EIP-55 checksum failed" confuses non-devs | User-friendly: "Address checksum is invalid (typo?)" with link to explanation |
-| No visual feedback during network requests | Users think tool is frozen or broken | Show spinner/skeleton + disable form during validation |
-| Errors without highlighting problematic field | Users hunt for the error location | Highlight/scroll to problematic field, show inline error message next to it |
-| No success confirmation | Users unsure if validation passed | Clear success message: "✓ Configuration valid" with green visual indicator |
+**Which phase should address it:**
+Phase 0 (Repository restructuring) -- this is the first step before any SDK code is written.
+
+**Confidence:** MEDIUM -- based on common monorepo migration patterns, specific impact depends on chosen package manager.
+
+---
+
+### Pitfall 9: Solana Addresses Have No Checksum -- Validation Ceiling is Low
+
+**What goes wrong:**
+Developers spend time trying to implement "proper" Solana address validation with checksum verification, similar to EIP-55 for Ethereum. This effort is wasted because Solana addresses do NOT have checksums. A truncated or mistyped Solana address can still be valid Base58 and decode to 32 bytes. The validator cannot catch typos.
+
+**Why it happens:**
+Developers assume all blockchain addresses have some form of error detection (like Bitcoin's Base58Check or Ethereum's EIP-55). Solana uses raw Base58 without any checksum, which means the only validation possible is: (1) characters are valid Base58 alphabet, (2) decoded output is exactly 32 bytes. That is the ceiling. No typo detection is possible.
+
+**Prevention:**
+1. Accept the validation ceiling: for Solana, validation = valid Base58 + 32-byte decoded length. Document this limitation.
+2. Do NOT promise "typo detection" for Solana addresses. The best the SDK can do is format validation.
+3. Consider adding a warning in the validation result: "Solana addresses do not include checksums. Typos cannot be detected by format validation alone."
+4. Focus effort on making EVM checksum validation excellent (where checksums exist and can catch errors), rather than over-investing in Solana validation.
+
+**Detection:**
+- Review: does the Solana validation code try to do more than Base58 + length check? If so, it may be doing unnecessary work or giving false confidence.
+
+**Which phase should address it:**
+Phase 1 (Validation rules implementation) -- set expectations correctly from the start.
+
+**Confidence:** HIGH -- verified against [Solana discussion on Base58Check](https://github.com/solana-labs/solana/issues/6970)
+
+---
+
+## Minor Pitfalls
+
+Mistakes that cause annoyance, confusion, or minor rework.
+
+---
+
+### Pitfall 10: Vendored Code Diverges from Upstream Without Audit Trail
+
+**What goes wrong:**
+The vendored `js-sha3` keccak256 or Base58 decoder is modified slightly during integration (e.g., converting from CommonJS to ESM, removing unused functions, changing variable names). Over time, nobody remembers what was changed from the upstream source. When a security issue is found in the upstream library, it is unclear whether the vendored version is affected.
+
+**Prevention:**
+1. Add a comment block at the top of each vendored file: original library name, version, URL, date vendored, and list of modifications.
+2. Keep vendored code in a dedicated `src/vendor/` directory, separate from project code.
+3. Prefer extracting only the needed function (e.g., only `keccak_256` from js-sha3) rather than vendoring the entire library -- less surface area to audit.
+4. If the vendored code is small enough (~50-100 lines for Base58), write it from scratch with tests rather than vendoring -- then there is no upstream to track.
+
+**Which phase should address it:**
+Phase 1 (Core crypto vendoring) -- establish the vendoring convention immediately.
+
+---
+
+### Pitfall 11: IIFE Bundle Includes Node.js-Specific Code Paths
+
+**What goes wrong:**
+The IIFE bundle for browsers includes `Buffer`, `process`, or `require()` references that fail in the browser. The bundle loads but throws at runtime when these Node.js globals are undefined.
+
+**Prevention:**
+1. Set `platform: 'browser'` in the tsup config for the IIFE build.
+2. Use `Uint8Array` instead of `Buffer` everywhere in the vendored crypto code. `Buffer` is Node-only; `Uint8Array` works in both environments.
+3. Use `TextEncoder` for string-to-bytes conversion instead of `Buffer.from()`.
+4. Add a CI test that loads the IIFE bundle in a browser-like environment (jsdom) and verifies no `Buffer`/`process`/`require` references exist.
+
+**Which phase should address it:**
+Phase 2 (Build system) -- configure the IIFE build correctly from the start.
+
+---
+
+### Pitfall 12: npm Package Name Squatting / Availability
+
+**What goes wrong:**
+The team builds the entire SDK under the name `x402check`, then at publish time discovers the name is already taken on npm. All documentation, imports, and references must be changed.
+
+**Prevention:**
+1. Check `npm view x402check` BEFORE writing any code. If it returns a 404, the name is available.
+2. Have a backup name ready (e.g., `@x402/check`, `x402-validate`, `x402check-sdk`).
+3. Consider using a scoped package name (`@x402check/core`) which is always available if you own the org.
+
+**Which phase should address it:**
+Phase 0 (Planning) -- verify name availability before any code is written.
+
+---
+
+### Pitfall 13: Test Fixtures Drift from Actual x402 Spec
+
+**What goes wrong:**
+Test fixtures are hand-crafted to match the team's understanding of the spec, not the actual spec. The SDK validates against the fixtures perfectly but fails on real-world x402 configs from live endpoints.
+
+**Prevention:**
+1. Include real-world configs from actual x402 endpoints in the test fixtures (the existing `token-data-aggregator` endpoint response should be captured).
+2. Periodically fetch live configs and run them through the validator to catch drift.
+3. Reference the canonical x402 spec from [coinbase/x402](https://github.com/coinbase/x402) when creating fixtures, not the existing website's interpretation.
+4. The PRD already documents specific spec mismatches (e.g., `payments` vs `accepts`, `address` vs `payTo`) -- use these as a checklist.
+
+**Which phase should address it:**
+Phase 1 (Validation rules) -- fixtures should be created from the spec, not from assumptions.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Repo restructuring | Workspace config breaks website serving | Keep website at root, test `open index.html` after restructuring |
+| Crypto vendoring | Keccak-256 vs SHA-3 confusion | Empty-string canary test, EIP-55 reference vectors |
+| Crypto vendoring | Base58 leading zeros | Roundtrip test with leading-zero byte arrays |
+| Build system | tsup IIFE export nesting | Use named exports only, test `window.x402Validate.validate` in browser |
+| Build system | Node.js code in browser bundle | Set `platform: 'browser'`, use Uint8Array not Buffer |
+| Package config | Types not resolving for consumers | Run `arethetypeswrong` before every publish |
+| Package config | dist/ excluded from publish | Set `"files": ["dist"]`, run `npm pack --dry-run` |
+| Website integration | ValidationResult shape mismatch | Map every field reference in index.html before starting |
+| Publishing | Package name taken | Check `npm view x402check` before writing code |
+| Ongoing | Vendored code diverges silently | Header comments with upstream source, version, modifications |
 
 ## "Looks Done But Isn't" Checklist
 
-Things that appear complete but are missing critical pieces.
+Before considering the SDK extraction complete:
 
-- [ ] **Address validation:** Often missing checksum verification — verify EIP-55 for Ethereum, Base58Check for Bitcoin, not just format regex
-- [ ] **Error handling:** Often missing network error distinction — verify both HTTP errors AND network failures are handled differently
-- [ ] **CORS proxy:** Often missing error preservation — verify Worker returns original error details, not generic 500s
-- [ ] **Loading states:** Often missing during async operations — verify spinner/disabled state appears before network requests
-- [ ] **Async validation:** Often missing race condition protection — verify AbortController cancels stale requests
-- [ ] **State management:** Often missing clear separation of concerns — verify business logic is separate from DOM manipulation
-- [ ] **Chain validation:** Often missing chain-specific logic — verify Ethereum/Bitcoin/Solana each have dedicated validation, not shared generic code
-- [ ] **Timeout handling:** Often missing request timeouts — verify fetch calls have AbortSignal with timeout (e.g., 10 seconds)
-- [ ] **Error messages:** Often missing user-friendly translations — verify technical errors are transformed before display
-- [ ] **Double submission:** Often missing form disabling — verify submit button disabled during validation to prevent double clicks
-
-## Recovery Strategies
-
-When pitfalls occur despite prevention, how to recover.
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Client-side validation only | MEDIUM | Add validation to Worker, update tests to verify both paths, might reveal bugs that were hidden |
-| CORS proxy error swallowing | LOW | Update Worker error handling to preserve details, add error type enum, redeploy Worker |
-| Vanilla JS state spaghetti | HIGH | Refactor to Proxy-based state or add lightweight framework — requires rewriting core logic |
-| Missing checksum validation | MEDIUM | Add checksum libraries, update validation logic, add tests for each chain, might break existing "valid" addresses that were false positives |
-| No loading states | LOW | Add loading flags to state, show/hide spinner, disable form during async — cosmetic change |
-| Cryptic error messages | LOW | Add error transformation layer between API and UI, create message dictionary — doesn't change logic |
-| Race conditions in async | MEDIUM | Add AbortController pattern, request ID tracking — requires understanding existing async flow |
-| Network errors silent | LOW | Update error handling to catch network exceptions separately — wrapper around fetch calls |
-
-## Pitfall-to-Phase Mapping
-
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Client-side validation only | Phase 1 (Core Validation) | Worker logs show validation happening; browser-only validation can't be bypassed |
-| CORS proxy error swallowing | Phase 1 (Core Validation) | Intentionally trigger errors and verify details preserved; check Worker logs in Cloudflare Dashboard |
-| Vanilla JS state spaghetti | Phase 0 (Architecture) | Can add new validation field without modifying 5+ places; state changes trigger consistent UI updates |
-| Address checksum blindness | Phase 1 (Core Validation) | Tests verify checksum validation for each chain; deliberately typo'd addresses fail validation |
-| Missing loading states | Phase 2 (UX Refinement) | User testing confirms no "is it working?" confusion; form disabled during validation |
-| Cryptic error messages | Phase 2 (UX Refinement) | User testing with non-devs confirms errors are understandable; error messages don't use codes/jargon |
-| Race conditions in async | Phase 1 (Core Validation) | Rapid typing test shows no stale results; AbortController cancels previous requests in network tab |
-| Network error silent failure | Phase 1 (Core Validation) | Disconnect network and verify clear error message; timeout protection works (10s test) |
+- [ ] **Keccak canary:** Empty string hashes to `c5d2460...` not `a7ffc6f...`
+- [ ] **EIP-55 vectors:** All four reference addresses from the EIP-55 spec pass
+- [ ] **Base58 leading zeros:** Address starting with `1` characters decodes correctly
+- [ ] **Base58 roundtrip:** Encode then decode produces identical bytes
+- [ ] **IIFE bundle:** `window.x402Validate.validate` is a function in browser console
+- [ ] **IIFE bundle:** No `Buffer`, `process`, or `require` references in bundle
+- [ ] **Types resolution:** `arethetypeswrong --pack .` passes for node10, node16, bundler
+- [ ] **Package contents:** `npm pack --dry-run` includes all dist/ files
+- [ ] **Website renders:** All 4 example configs produce correct UI output with new SDK
+- [ ] **Real-world config:** Live endpoint config validates correctly
+- [ ] **Solana validation ceiling:** No false promises about typo detection in docs/comments
+- [ ] **Export shape:** No `export default` in entry point (breaks IIFE globalName)
 
 ## Sources
 
-### Validation Tool Research
-- [OWASP Input Validation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)
-- [Client-Side Validation: Security Flaws and Real Exploits](https://deepstrike.io/blog/client-site-vulnerabilities)
-- [Problems with Using Website Validation Services - WebFX](https://www.webfx.com/blog/web-design/problems-with-using-website-validation-services/)
+### EIP-55 and Keccak-256
+- [EIP-55 Specification](https://eips.ethereum.org/EIPS/eip-55)
+- [SHA3 vs Keccak-256 Explanation](https://ethereumclassic.org/blog/2017-02-10-keccak/)
+- [SHA3 vs Keccak-256 Technical Diff](https://byteatatime.dev/posts/sha3-vs-keccak256/)
+- [EIP-55 Implementation Guide](https://narteysarso.hashnode.dev/ethereum-address-encoding-and-verification-eip-55)
+- [js-sha3 Library](https://github.com/emn178/js-sha3)
 
-### Vanilla JavaScript Patterns
-- [The problem with single page apps | Go Make Things](https://gomakethings.com/the-problem-with-single-page-apps/)
-- [Building a Single Page App without frameworks - DEV Community](https://dev.to/dcodeyt/building-a-single-page-app-without-frameworks-hl9)
-- [State Management in Vanilla JS: 2026 Trends | Medium](https://medium.com/@chirag.dave/state-management-in-vanilla-js-2026-trends-f9baed7599de)
-- [Modern State Management in Vanilla JavaScript: 2026 Patterns and Beyond | Medium](https://medium.com/@orami98/modern-state-management-in-vanilla-javascript-2026-patterns-and-beyond-ce00425f7ac5)
+### Base58 and Solana
+- [Solana Base58Check Discussion](https://github.com/solana-labs/solana/issues/6970)
+- [@solana/addresses Package](https://www.npmjs.com/package/@solana/addresses)
+- [Base58 in JavaScript](https://ssojet.com/binary-encoding-decoding/base58-in-javascript-in-browser/)
+- [base58-js (560 bytes)](https://www.npmjs.com/package/base58-js)
 
-### Cloudflare Workers & CORS
-- [CORS header proxy - Cloudflare Workers docs](https://developers.cloudflare.com/workers/examples/cors-header-proxy/)
-- [How To Fix CORS Errors On Cloudflare Workers - DEV Community](https://dev.to/megaconfidence/how-to-fix-cors-errors-on-cloudflare-workers-1jn6)
-- [Handling CORS with cloudflare workers](https://srijanshetty.in/technical/cloudflare-workers-cors/)
+### tsup and Build Tooling
+- [tsup UMD Support Issue #924](https://github.com/egoist/tsup/issues/924)
+- [tsup IIFE globalName Issue #1290](https://github.com/egoist/tsup/issues/1290)
+- [esbuild globalName and Default Exports Issue #3740](https://github.com/evanw/esbuild/issues/3740)
 
-### Blockchain Address Validation
-- [Why Address Validation Is Critical in Blockchain Payments - Crypto APIs](https://cryptoapis.io/blog/539-why-address-validation-is-critical-in-blockchain-payments-technical-strengths-and-business-assurance)
-- [Ethereum Address Checksum Explained | CoinCodex](https://coincodex.com/article/2078/ethereum-address-checksum-explained/)
-- [Top 26 Cryptocurrency Risks and Mistakes in 2026 - H-X Technologies](https://www.h-x.technology/blog/top-26-cryptocurrency-risks-and-mistakes-in-2026)
-- [How to Check if a Crypto Wallet Address is Valid in 5 Steps - Streamflow](https://streamflow.finance/blog/crypto-wallet-address)
-- [multicoin-address-validator - npm](https://www.npmjs.com/package/multicoin-address-validator)
+### TypeScript Package Publishing
+- [TypeScript ESM/CJS Publishing Guide](https://lirantal.com/blog/typescript-in-2025-with-esm-and-cjs-npm-publishing)
+- [Are The Types Wrong CLI](https://github.com/arethetypeswrong/arethetypeswrong.github.io)
+- [package.json exports field guide](https://hirok.io/posts/package-json-exports)
+- [publint - Package Linter](https://publint.dev/)
+- [Dual Publishing with tsup](https://johnnyreilly.com/dual-publishing-esm-cjs-modules-with-tsup-and-are-the-types-wrong)
 
-### Error Handling & UX
-- [Error Message UX, Handling & Feedback - Pencil & Paper](https://www.pencilandpaper.io/articles/ux-pattern-analysis-error-feedback)
-- [Error-Message Guidelines - Nielsen Norman Group](https://www.nngroup.com/articles/error-message-guidelines/)
-- [Error Handling with Async Await in JavaScript - Codefinity](https://codefinity.com/blog/Error-Handling-with-Async-Await-in-JavaScript)
-- [Using the Fetch API - MDN](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)
+### npm Publishing
+- [Why dist/ is Missing From Packages](https://jeremyrichardson.dev/blog/why-is-my-dist-directory-missing-from-my-package)
+- [npm publish files field issue](https://github.com/npm/npm/issues/3571)
 
-### Loading States & UX Patterns
-- [UX Design Patterns for Loading - Pencil & Paper](https://www.pencilandpaper.io/articles/ux-pattern-analysis-loading-feedback)
-- [Your Loading Spinner Is a UX Killer! Here's an Alternative - Boldist](https://boldist.co/usability/loading-spinner-ux-killer/)
-- [Building Resilient Loading States: Beyond Simple Spinners - DEV Community](https://dev.to/hasnaat-iftikhar/building-resilient-loading-states-beyond-simple-spinners-2jmo)
+### Monorepo Migration
+- [Node.js Monolith to Monorepo](https://www.infoq.com/articles/nodejs-monorepo/)
+- [Complete Monorepo Guide 2025](https://jsdev.space/complete-monorepo-guide/)
+- [npm Workspaces for Monorepos](https://medium.com/edgybees-blog/how-to-move-from-an-existing-repository-to-a-monorepo-using-npm-7-workspaces-27012a100269)
 
 ---
-*Pitfalls research for: x402check (web-based blockchain address validation tool)*
-*Researched: 2026-01-22*
+*Pitfalls research for: x402check SDK extraction milestone*
+*Researched: 2026-01-29*
