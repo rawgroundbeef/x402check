@@ -88,17 +88,17 @@ async function testX402Url(url, method = 'GET', body = null) {
     }
   }
 
-  // Priority 2: Response body
+  // Priority 2: Response body - always try to read and parse
   if (!config) {
-    const contentType = response.headers.get('Content-Type') || '';
-    if (contentType.includes('application/json') || contentType.includes('text/')) {
-      try {
-        const bodyText = await response.text();
+    try {
+      const bodyText = await response.text();
+      if (bodyText && bodyText.trim()) {
         config = JSON.parse(bodyText);
         configSource = 'response body';
-      } catch (e) {
-        // Not valid JSON
       }
+    } catch (e) {
+      // Not valid JSON - that's ok, config stays null
+      console.log('Body parse failed:', e.message);
     }
   }
 
@@ -112,16 +112,23 @@ async function testX402Url(url, method = 'GET', body = null) {
   // Validate if we have config
   let validation = null;
   if (config) {
-    validation = validateX402Config(config);
+    try {
+      validation = validateX402Config(config);
 
-    // Add format check
-    checks.formatCheck = {
-      pass: validation.detectedFormat === 'v2' || validation.detectedFormat === 'v2-marketplace',
-      label: 'Using v2 format',
-      detail: validation.detectedFormat === 'v2' || validation.detectedFormat === 'v2-marketplace'
-        ? 'Canonical format'
-        : `Using ${validation.detectedFormat} format`
-    };
+      // Add format check
+      if (validation && validation.detectedFormat) {
+        checks.formatCheck = {
+          pass: validation.detectedFormat === 'v2' || validation.detectedFormat === 'v2-marketplace',
+          label: 'Using v2 format',
+          detail: validation.detectedFormat === 'v2' || validation.detectedFormat === 'v2-marketplace'
+            ? 'Canonical format'
+            : `Using ${validation.detectedFormat} format`
+        };
+      }
+    } catch (e) {
+      console.error('Validation error:', e);
+      // validation stays null
+    }
   }
 
   return {
