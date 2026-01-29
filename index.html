@@ -518,6 +518,30 @@
       color: var(--accent);
     }
 
+    .raw-response {
+      margin-bottom: 20px;
+    }
+
+    .raw-response summary {
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 10px 0;
+      transition: color 0.15s;
+    }
+
+    .raw-response summary:hover {
+      color: var(--text-primary);
+    }
+
+    .raw-response .code-block {
+      margin-top: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     .error-card {
       background: var(--error-dim);
       border: 1px solid rgba(248, 81, 73, 0.3);
@@ -1020,10 +1044,21 @@
         }
         html += '</div>';
 
+        // Raw response
+        if (result.rawBody) {
+          let formattedBody = result.rawBody;
+          try { formattedBody = JSON.stringify(JSON.parse(result.rawBody), null, 2); } catch(e) {}
+          html += `
+            <details class="raw-response">
+              <summary>View raw response</summary>
+              <div class="code-block">${escapeHtml(formattedBody)}</div>
+            </details>`;
+        }
+
         if (result.validation) {
           html += renderValidationResult(result.validation, result.config);
         } else if (result.config) {
-          html += '<div class="error-card"><strong>Config found but validation failed</strong><br>Raw config: <pre>' + JSON.stringify(result.config, null, 2) + '</pre></div>';
+          html += '<div class="error-card"><strong>Config found but validation failed</strong><br>Raw config: <pre>' + escapeHtml(JSON.stringify(result.config, null, 2)) + '</pre></div>';
         } else {
           html += '<div class="error-card"><strong>No payment config found</strong><br>The endpoint returned ' + result.status + ' but no valid JSON config was extracted from the response body or PAYMENT-REQUIRED header.</div>';
         }

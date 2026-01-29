@@ -67,6 +67,14 @@ async function testX402Url(url, method = 'GET', body = null) {
     }
   };
 
+  // Always read response body
+  let rawBody = null;
+  try {
+    rawBody = await response.text();
+  } catch (e) {
+    console.log('Failed to read body:', e.message);
+  }
+
   // Try to extract config
   let config = null;
   let configSource = null;
@@ -88,17 +96,13 @@ async function testX402Url(url, method = 'GET', body = null) {
     }
   }
 
-  // Priority 2: Response body - always try to read and parse
-  if (!config) {
+  // Priority 2: Response body
+  if (!config && rawBody && rawBody.trim()) {
     try {
-      const bodyText = await response.text();
-      if (bodyText && bodyText.trim()) {
-        config = JSON.parse(bodyText);
-        configSource = 'response body';
-      }
+      config = JSON.parse(rawBody);
+      configSource = 'response body';
     } catch (e) {
-      // Not valid JSON - that's ok, config stays null
-      console.log('Body parse failed:', e.message);
+      // Not valid JSON
     }
   }
 
@@ -136,6 +140,7 @@ async function testX402Url(url, method = 'GET', body = null) {
     config,
     configSource,
     validation,
+    rawBody,
     status: response.status,
     method,
     url
