@@ -16,8 +16,9 @@ export * from './crypto'
 // Re-export validation utilities (Phase 7 Plan 02)
 export { validateAddress, validateEvmAddress, validateSolanaAddress } from './validation'
 
-// Re-export validation orchestrator when available (Phase 8)
-// export { validate } from './validation'
+// Re-export validation orchestrator (Phase 8)
+export { validate } from './validation'
+export type { ValidationOptions } from './validation'
 
 // Version constant
 export const VERSION = '0.0.1' as const
