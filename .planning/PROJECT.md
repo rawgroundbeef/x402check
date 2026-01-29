@@ -30,7 +30,19 @@ The site is live and functional. However, the validator was built on assumptions
 
 ### Active
 
-(To be defined in next milestone)
+- [ ] Spec-correct validation of x402 v1 and v2 PaymentRequired responses
+- [ ] Standalone npm package (`x402check`) usable by any JS/TS project
+- [ ] Browser-compatible UMD bundle loadable via CDN `<script>` tag
+- [ ] Comprehensive test suite (100+ cases, every field, every error path)
+- [ ] Backward-compatible detection of flat-legacy configs
+- [ ] Format detection (`v2`, `v1`, `flat-legacy`, `unknown`)
+- [ ] Normalization of any format to canonical v2 shape
+- [ ] Deep address validation for EVM (EIP-55 checksum) and Solana (Base58)
+- [ ] Extensible chain validation (easy for community PRs to add new chains)
+- [ ] Known networks registry (CAIP-2) and known assets registry
+- [ ] Strict mode option (warnings become errors for CI/CD)
+- [ ] Zero runtime dependencies (vendored Base58 + keccak256)
+- [ ] Website rebuilt on SDK via CDN import
 
 ### Out of Scope
 
@@ -63,10 +75,25 @@ The site is live and functional. However, the validator was built on assumptions
 | No `maxTimeoutSeconds` | Required |
 | Simple chain names | CAIP-2 format |
 
+## Current Milestone: v2.0 Spec-Compliant SDK
+
+**Goal:** Extract validation into a standalone npm package that correctly implements the canonical x402 v1/v2 specs, then rebuild the website on top of it.
+
+**Target features:**
+- Standalone `x402check` npm package in `packages/x402check/`
+- TypeScript source with ESM + CJS + UMD build outputs
+- Spec-correct validation (v1, v2, flat-legacy detection and normalization)
+- Deep address validation for EVM + Solana, extensible for other chains
+- Strict mode for CI/CD pipelines
+- Zero runtime dependencies
+- Website integration via CDN `<script>` tag
+
 ## Constraints
 
 - **Client-side first**: All validation logic runs in browser, proxy only for URL fetching
 - **CORS**: Direct URL fetches will fail, proxy required for URL input method
+- **Zero runtime deps**: SDK must have no runtime dependencies for browser bundle size
+- **Monorepo**: SDK lives in `packages/x402check/`, website stays at root
 
 ## Key Decisions
 
@@ -79,6 +106,10 @@ The site is live and functional. However, the validator was built on assumptions
 | CDN with SRI hashes | Library integrity verification | ✓ Good |
 | ethers.js v5.7.2 | Better CDN availability than v6 | ✓ Good |
 | Layered validation | Prevents error cascades | ✓ Good — keep pattern |
+| Monorepo structure | SDK in packages/x402check/, website at root | — Pending |
+| Zero runtime deps | Vendor Base58 + keccak256 for tiny browser bundle | — Pending |
+| TypeScript + tsup | Type safety for SDK, ESM/CJS/UMD output | — Pending |
+| Strict mode | Warnings→errors for CI/CD enforcement | — Pending |
 
 ---
-*Last updated: 2026-01-29 after v1.0 milestone*
+*Last updated: 2026-01-29 after v2.0 milestone started*

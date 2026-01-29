@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Developers can validate their x402 config in under 30 seconds with actionable feedback
-**Current focus:** Planning next milestone (spec-compliant SDK)
+**Current focus:** Milestone v2.0 — Spec-Compliant SDK
 
 ## Current Position
 
-Phase: None (between milestones)
-Plan: N/A
-Status: v1.0 shipped, ready for next milestone
-Last activity: 2026-01-29 — v1.0 milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-01-29 — Milestone v2.0 started
 
-Progress: v1.0 complete. Next milestone not yet started.
+Progress: Milestone v2.0 initialized. Requirements and roadmap in progress.
 
 ## Performance Metrics
 
@@ -44,11 +44,11 @@ None.
 
 ### Blockers/Concerns
 
-- Validator field names don't match canonical x402 v2 spec (critical — needs rewrite)
+- Validator field names don't match canonical x402 v2 spec (critical — being addressed in v2.0)
 
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: v1.0 milestone archived
+Stopped at: Milestone v2.0 initialization
 Resume file: None
-Next: /gsd:new-milestone (spec-compliant SDK rewrite)
+Next: Define requirements → create roadmap
