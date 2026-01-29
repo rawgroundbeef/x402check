@@ -31,6 +31,7 @@ export const ErrorCode = {
   // Address errors (codes only, validation is Phase 7)
   INVALID_EVM_ADDRESS: 'INVALID_EVM_ADDRESS',
   BAD_EVM_CHECKSUM: 'BAD_EVM_CHECKSUM',
+  NO_EVM_CHECKSUM: 'NO_EVM_CHECKSUM',
   INVALID_SOLANA_ADDRESS: 'INVALID_SOLANA_ADDRESS',
   ADDRESS_NETWORK_MISMATCH: 'ADDRESS_NETWORK_MISMATCH',
 
@@ -75,6 +76,7 @@ export const ErrorMessages = {
   // Address errors
   INVALID_EVM_ADDRESS: 'Invalid EVM address format',
   BAD_EVM_CHECKSUM: 'EVM address has invalid checksum',
+  NO_EVM_CHECKSUM: 'EVM address is all-lowercase with no checksum protection',
   INVALID_SOLANA_ADDRESS: 'Invalid Solana address format',
   ADDRESS_NETWORK_MISMATCH: 'Address format does not match network type',
 
