@@ -975,6 +975,142 @@
         transform: translateX(-50%) translateY(0);
       }
     }
+
+    /* Schema Section */
+    .schema-section {
+      margin: 48px 0;
+    }
+
+    .schema-header {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .schema-intro {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .schema-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .schema-card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .schema-card-title h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .schema-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .schema-badge.recommended {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .schema-badge.legacy {
+      background: var(--warning-dim);
+      color: var(--warning);
+    }
+
+    .schema-card-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .schema-card .code-block {
+      margin-bottom: 12px;
+    }
+
+    .schema-card-note {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 12px;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      border-left: 3px solid var(--info);
+      line-height: 1.6;
+    }
+
+    .schema-card-note.tip {
+      border-left-color: var(--accent);
+    }
+
+    .schema-card-note.warn {
+      border-left-color: var(--warning);
+    }
+
+    .schema-card-note code {
+      background: var(--bg-deep);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .schema-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .schema-source-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .schema-source-link:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 600px) {
+      .schema-sources {
+        flex-direction: column;
+      }
+
+      .schema-source-link {
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1122,6 +1258,121 @@
       </div>
     </div>
 
+    <!-- Define Your Schema -->
+    <div class="schema-section" id="schema-section">
+      <div class="schema-header">Define Your Schema</div>
+      <p class="schema-intro">
+        When an agent pays for your resource, it needs to know <em>how to call it</em> &mdash; what parameters to send and what response to expect. x402 has two ways to declare this: the V2 Bazaar extension (recommended) and the V1 outputSchema field.
+      </p>
+
+      <!-- V2 Bazaar -->
+      <div class="schema-card">
+        <div class="schema-card-title">
+          <h3>V2 Bazaar Extension</h3>
+          <span class="schema-badge recommended">Recommended</span>
+        </div>
+        <p class="schema-card-desc">
+          Add <code>extensions.bazaar</code> to your 402 response. It has two parts: <code>info</code> (an example showing how to call your API) and <code>schema</code> (a JSON Schema defining types and constraints). Together, they let agents understand and validate requests before paying.
+        </p>
+        <div class="code-block">{
+  <span class="key">"x402Version"</span>: <span class="number">2</span>,
+  <span class="key">"accepts"</span>: [{ <span class="string">/* ...payment config... */</span> }],
+  <span class="key">"extensions"</span>: {
+    <span class="key">"bazaar"</span>: {
+      <span class="key">"info"</span>: {
+        <span class="key">"input"</span>: {
+          <span class="key">"type"</span>: <span class="string">"http"</span>,
+          <span class="key">"method"</span>: <span class="string">"GET"</span>,
+          <span class="key">"queryParams"</span>: { <span class="key">"city"</span>: <span class="string">"San Francisco"</span> }
+        },
+        <span class="key">"output"</span>: {
+          <span class="key">"type"</span>: <span class="string">"json"</span>,
+          <span class="key">"example"</span>: { <span class="key">"temperature"</span>: <span class="number">72</span>, <span class="key">"weather"</span>: <span class="string">"foggy"</span> }
+        }
+      },
+      <span class="key">"schema"</span>: {
+        <span class="key">"$schema"</span>: <span class="string">"https://json-schema.org/draft/2020-12/schema"</span>,
+        <span class="key">"type"</span>: <span class="string">"object"</span>,
+        <span class="key">"properties"</span>: {
+          <span class="key">"input"</span>: {
+            <span class="key">"type"</span>: <span class="string">"object"</span>,
+            <span class="key">"properties"</span>: {
+              <span class="key">"type"</span>: { <span class="key">"type"</span>: <span class="string">"string"</span>, <span class="key">"const"</span>: <span class="string">"http"</span> },
+              <span class="key">"method"</span>: { <span class="key">"type"</span>: <span class="string">"string"</span>, <span class="key">"enum"</span>: [<span class="string">"GET"</span>] },
+              <span class="key">"queryParams"</span>: {
+                <span class="key">"type"</span>: <span class="string">"object"</span>,
+                <span class="key">"properties"</span>: {
+                  <span class="key">"city"</span>: { <span class="key">"type"</span>: <span class="string">"string"</span> }
+                },
+                <span class="key">"required"</span>: [<span class="string">"city"</span>]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}</div>
+        <div class="schema-card-note tip">
+          <strong>Tip:</strong> <code>info</code> is "show me an example" &mdash; agents use it to understand your API at a glance. <code>schema</code> is "give me the contract" &mdash; agents use it to validate requests before sending.
+        </div>
+      </div>
+
+      <!-- V1 outputSchema -->
+      <div class="schema-card">
+        <div class="schema-card-title">
+          <h3>V1 outputSchema</h3>
+          <span class="schema-badge legacy">Legacy</span>
+        </div>
+        <p class="schema-card-desc">
+          The older approach places an <code>outputSchema</code> on each <code>accepts[]</code> entry. It defines <code>input</code> (HTTP method and fields) and <code>output</code> (response shape). Still supported, but V2 Bazaar is the standard going forward.
+        </p>
+        <div class="code-block">{
+  <span class="key">"x402Version"</span>: <span class="number">2</span>,
+  <span class="key">"accepts"</span>: [{
+    <span class="key">"scheme"</span>: <span class="string">"exact"</span>,
+    <span class="key">"network"</span>: <span class="string">"eip155:8453"</span>,
+    <span class="key">"payTo"</span>: <span class="string">"0x..."</span>,
+    <span class="key">"asset"</span>: <span class="string">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>,
+    <span class="key">"amount"</span>: <span class="string">"10000"</span>,
+    <span class="key">"outputSchema"</span>: {
+      <span class="key">"input"</span>: {
+        <span class="key">"type"</span>: <span class="string">"http"</span>,
+        <span class="key">"method"</span>: <span class="string">"POST"</span>,
+        <span class="key">"bodyType"</span>: <span class="string">"json"</span>,
+        <span class="key">"bodyFields"</span>: {
+          <span class="key">"prompt"</span>: {
+            <span class="key">"type"</span>: <span class="string">"string"</span>,
+            <span class="key">"required"</span>: <span class="number">true</span>,
+            <span class="key">"description"</span>: <span class="string">"The prompt to send"</span>
+          }
+        }
+      },
+      <span class="key">"output"</span>: {
+        <span class="key">"result"</span>: { <span class="key">"type"</span>: <span class="string">"string"</span> }
+      }
+    }
+  }]
+}</div>
+        <div class="schema-card-note warn">
+          <strong>Note:</strong> x402scan requires an input schema to list a resource. If your endpoint accepts parameters, always declare them &mdash; otherwise agents won't know how to call you.
+        </div>
+      </div>
+
+      <!-- SDK note -->
+      <div class="schema-card-note">
+        <strong>SDK note:</strong> The Coinbase x402 SDK provides <code>declareDiscoveryExtension()</code> which accepts an <code>inputSchema</code> convenience field. This is an SDK-only helper &mdash; it never appears in the 402 wire format. On the wire, schemas are always delivered via <code>extensions.bazaar</code>.
+      </div>
+
+      <!-- Source links -->
+      <div class="schema-sources">
+        <a href="https://github.com/coinbase/x402/blob/main/docs/extensions/bazaar.md" target="_blank" rel="noopener" class="schema-source-link">Coinbase Bazaar Spec &nearr;</a>
+        <a href="https://bazaar.x402.org" target="_blank" rel="noopener" class="schema-source-link">Bazaar GitBook &nearr;</a>
+        <a href="https://x402scan.com" target="_blank" rel="noopener" class="schema-source-link">x402scan &nearr;</a>
+        <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="schema-source-link">Coinbase x402 SDK &nearr;</a>
+      </div>
+    </div>
+
     <!-- FAQ -->
     <div class="faq-section">
       <h2 class="faq-title">FAQ</h2>
@@ -1179,6 +1430,26 @@
         </summary>
         <div class="faq-answer">
           Add marketplace metadata (name, description, outputSchema) to your v2 config, then submit at <a href="https://x402jobs.com" target="_blank" rel="noopener">x402jobs.com</a>. Complete listings get better placement.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-question">
+          <span>How do I define API parameters for my resource?</span>
+          <span class="arrow">▶</span>
+        </summary>
+        <div class="faq-answer">
+          Add a schema to your 402 response so agents know what parameters to send. The recommended approach is the <a href="#schema-section">V2 Bazaar extension</a> (<code>extensions.bazaar</code>) which includes both an example and a JSON Schema. See the <a href="#schema-section">Define Your Schema</a> section above, or read the <a href="https://github.com/coinbase/x402/blob/main/docs/extensions/bazaar.md" target="_blank" rel="noopener">Coinbase Bazaar spec</a>.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-question">
+          <span>What is the Bazaar extension?</span>
+          <span class="arrow">▶</span>
+        </summary>
+        <div class="faq-answer">
+          Bazaar is the official discovery layer for x402 resources. It lives at <code>extensions.bazaar</code> in your 402 response and has two parts: <code>info</code> ("show me an example" &mdash; concrete values an agent can try) and <code>schema</code> ("give me the contract" &mdash; a JSON Schema defining types, constraints, and required fields). Together they let agents discover, validate, and call your API automatically. See the <a href="https://bazaar.x402.org" target="_blank" rel="noopener">Bazaar GitBook</a> and <a href="https://github.com/coinbase/x402/blob/main/docs/extensions/bazaar.md" target="_blank" rel="noopener">Coinbase spec</a> for details.
         </div>
       </details>
     </div>
