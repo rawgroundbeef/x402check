@@ -58,33 +58,23 @@ describe('detect', () => {
     })
   })
 
-  describe('flat-legacy format', () => {
-    it('detects flat config with payTo + amount + network', () => {
+  describe('versionless configs are unknown', () => {
+    it('returns unknown for flat config with payTo + amount + network (no x402Version)', () => {
       expect(
         detect({
           payTo: '0xabc',
           amount: '100',
           network: 'base',
         })
-      ).toBe('flat-legacy')
+      ).toBe('unknown')
     })
 
-    it('detects flat config with address + minAmount + chain', () => {
-      expect(
-        detect({
-          address: '0xabc',
-          minAmount: '100',
-          chain: 'base',
-        })
-      ).toBe('flat-legacy')
-    })
-
-    it('detects flat config with payments array', () => {
+    it('returns unknown for config with payments array (no x402Version)', () => {
       expect(
         detect({
           payments: [{ address: '0xabc', amount: '100', chain: 'base' }],
         })
-      ).toBe('flat-legacy')
+      ).toBe('unknown')
     })
   })
 
@@ -193,67 +183,20 @@ describe('normalize', () => {
     })
   })
 
-  describe('flat-legacy to v2', () => {
-    it('wraps flat config in accepts array with scheme:exact', () => {
-      const result = normalize({
+  describe('versionless configs return null', () => {
+    it('returns null for flat config without x402Version', () => {
+      expect(normalize({
         payTo: '0xdef',
         amount: '100',
         network: 'eip155:8453',
         asset: '0xabc',
-      })
-      expect(result).not.toBeNull()
-      expect(result!.x402Version).toBe(2)
-      expect(result!.accepts).toHaveLength(1)
-      expect(result!.accepts[0]!.scheme).toBe('exact')
-      expect(result!.accepts[0]!.payTo).toBe('0xdef')
-      expect(result!.accepts[0]!.amount).toBe('100')
-      expect(result!.accepts[0]!.network).toBe('eip155:8453')
+      })).toBeNull()
     })
 
-    it('maps simple chain name to CAIP-2', () => {
-      const result = normalize({
-        payTo: '0xdef',
-        amount: '100',
-        network: 'base',
-        asset: '0xabc',
-      })
-      expect(result!.accepts[0]!.network).toBe('eip155:8453')
-    })
-
-    it('maps legacy field names (address, minAmount, chain, currency)', () => {
-      const result = normalize({
-        address: '0xdef',
-        minAmount: '200',
-        chain: 'base',
-        currency: '0xabc',
-      })
-      expect(result!.accepts[0]!.payTo).toBe('0xdef')
-      expect(result!.accepts[0]!.amount).toBe('200')
-      expect(result!.accepts[0]!.network).toBe('eip155:8453')
-      expect(result!.accepts[0]!.asset).toBe('0xabc')
-    })
-
-    it('preserves extra and extensions', () => {
-      const result = normalize({
-        payTo: '0xdef',
-        amount: '100',
-        network: 'eip155:8453',
-        asset: '0xabc',
-        extra: { domain: 'test.com' },
-        extensions: { custom: true },
-      })
-      expect(result!.accepts[0]!.extra).toEqual({ domain: 'test.com' })
-      expect(result!.extensions).toEqual({ custom: true })
-    })
-
-    it('keeps unrecognized network as-is (validation catches it later)', () => {
-      const result = normalize({
-        payTo: '0xdef',
-        amount: '100',
-        network: 'unknown-chain',
-        asset: '0xabc',
-      })
-      expect(result!.accepts[0]!.network).toBe('unknown-chain')
+    it('returns null for config with payments array but no x402Version', () => {
+      expect(normalize({
+        payments: [{ address: '0xabc', amount: '100', chain: 'base' }],
+      })).toBeNull()
     })
   })
 

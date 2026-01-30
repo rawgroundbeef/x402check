@@ -59,14 +59,15 @@ describe('validateStructure', () => {
     expect(result.format).toBe('v1')
   })
 
-  test('flat-legacy object returns format flat-legacy with no issues', () => {
+  test('versionless flat object returns UNKNOWN_FORMAT error', () => {
     const result = validateStructure({
       payTo: '0xabc',
       amount: '1000000',
       network: 'base',
       asset: 'USDC',
     })
-    expect(result.issues).toHaveLength(0)
-    expect(result.format).toBe('flat-legacy')
+    expect(result.issues).toHaveLength(1)
+    expect(result.issues[0]!.code).toBe(ErrorCode.UNKNOWN_FORMAT)
+    expect(result.format).toBe('unknown')
   })
 })

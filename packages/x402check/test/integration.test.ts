@@ -36,11 +36,12 @@ describe('fixture-based tests', () => {
     expect(result.normalized!.x402Version).toBe(2)
   })
 
-  test('valid-flat.json passes with legacy warnings', () => {
+  test('valid-flat.json is rejected as unknown format (no x402Version)', () => {
     const fixture = loadFixture('valid-flat.json')
     const result = validate(fixture as object)
-    expect(result.version).toBe('flat-legacy')
-    expect(result.warnings.some((w) => w.code === ErrorCode.LEGACY_FORMAT)).toBe(true)
+    expect(result.valid).toBe(false)
+    expect(result.version).toBe('unknown')
+    expect(result.errors.some((e) => e.code === ErrorCode.UNKNOWN_FORMAT)).toBe(true)
   })
 
   test('invalid-no-accepts.json fails validation', () => {
@@ -75,7 +76,7 @@ describe('fixture-based tests', () => {
 })
 
 describe('round-trip validation', () => {
-  test('flat config -> normalize -> validate = valid:true, no legacy warnings', () => {
+  test('versionless flat config returns null from normalize()', () => {
     const flat = {
       payTo: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
       amount: '1000000',
@@ -83,11 +84,7 @@ describe('round-trip validation', () => {
       asset: 'USDC',
     }
     const normalized = normalize(flat)
-    expect(normalized).not.toBeNull()
-    const result = validate(normalized!)
-    expect(result.valid).toBe(true)
-    // After normalization, it's a v2 config, no legacy warnings
-    expect(result.warnings.some((w) => w.code === ErrorCode.LEGACY_FORMAT)).toBe(false)
+    expect(normalized).toBeNull()
   })
 
   test('v1 config -> normalize -> validate = valid:true, no legacy warnings', () => {
@@ -107,12 +104,10 @@ describe('round-trip validation', () => {
     expect(result.valid).toBe(true)
   })
 
-  test('normalized output has x402Version:2 for all input formats', () => {
-    const flat = { payTo: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed', amount: '1000000', network: 'base', asset: 'USDC' }
+  test('normalized output has x402Version:2 for v1 and v2 input formats', () => {
     const v1 = loadFixture('valid-v1.json') as object
     const v2 = loadFixture('valid-v2-base.json') as object
 
-    expect(normalize(flat)!.x402Version).toBe(2)
     expect(normalize(v1)!.x402Version).toBe(2)
     expect(normalize(v2)!.x402Version).toBe(2)
   })
@@ -299,8 +294,11 @@ describe('error code coverage', () => {
         resource: { url: 'https://example.com' },
       }),
     )
-    // LEGACY_FORMAT
-    collect(validate({ payTo: '0xabc', amount: '1000000', network: 'base', asset: 'USDC' }))
+    // LEGACY_FORMAT (via v1 config)
+    collect(validate({
+      x402Version: 1,
+      accepts: [{ scheme: 'exact', network: 'eip155:8453', maxAmountRequired: '1000000', asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', payTo: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed', maxTimeoutSeconds: 60, resource: { url: 'https://example.com' } }],
+    }))
     // INVALID_EVM_ADDRESS
     collect(
       validate({

@@ -21,16 +21,6 @@ export function validateLegacy(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
-  if (detectedFormat === 'flat-legacy') {
-    issues.push({
-      code: ErrorCode.LEGACY_FORMAT,
-      field: '$',
-      message: ErrorMessages.LEGACY_FORMAT,
-      severity: 'warning',
-      fix: 'Upgrade to x402 v2 format with accepts[] array',
-    })
-  }
-
   if (detectedFormat === 'v1') {
     issues.push({
       code: ErrorCode.LEGACY_FORMAT,

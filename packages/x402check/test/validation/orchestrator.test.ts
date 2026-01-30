@@ -40,16 +40,6 @@ function v1Config(): Record<string, unknown> {
   }
 }
 
-/** Helper: make a flat-legacy config object */
-function flatConfig(): Record<string, unknown> {
-  return {
-    payTo: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
-    amount: '1000000',
-    network: 'base',
-    asset: 'USDC',
-  }
-}
-
 /** Helper to check all error codes in a result */
 function allCodes(result: ValidationResult): string[] {
   return [...result.errors.map((e) => e.code), ...result.warnings.map((w) => w.code)]
@@ -113,13 +103,16 @@ describe('validate()', () => {
       expect(result.normalized!.x402Version).toBe(2)
     })
 
-    test('flat-legacy config returns valid:true if fields valid, version:flat-legacy', () => {
-      const result = validate(flatConfig())
-      // flat-legacy with 'base' network will get INVALID_NETWORK_FORMAT
-      // because normalization maps 'base' -> 'eip155:8453', but the network
-      // in the normalized entry is 'eip155:8453' which is valid
-      // However USDC is a symbol not an address, so UNKNOWN_ASSET warning
-      expect(result.version).toBe('flat-legacy')
+    test('versionless flat config returns UNKNOWN_FORMAT error', () => {
+      const result = validate({
+        payTo: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
+        amount: '1000000',
+        network: 'base',
+        asset: 'USDC',
+      })
+      expect(result.valid).toBe(false)
+      expect(result.version).toBe('unknown')
+      expect(result.errors.some((e) => e.code === ErrorCode.UNKNOWN_FORMAT)).toBe(true)
     })
 
     test('config with accepts:[] returns EMPTY_ACCEPTS', () => {
@@ -448,11 +441,6 @@ describe('validate()', () => {
   })
 
   describe('Level 5: Legacy warnings', () => {
-    test('flat-legacy config returns LEGACY_FORMAT warning', () => {
-      const result = validate(flatConfig())
-      expect(result.warnings.some((w) => w.code === ErrorCode.LEGACY_FORMAT)).toBe(true)
-    })
-
     test('v1 config returns LEGACY_FORMAT warning', () => {
       const result = validate(v1Config())
       expect(result.warnings.some((w) => w.code === ErrorCode.LEGACY_FORMAT)).toBe(true)

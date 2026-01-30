@@ -11,14 +11,6 @@ function makeConfig(): NormalizedConfig {
 }
 
 describe('validateLegacy', () => {
-  test('flat-legacy format returns LEGACY_FORMAT warning with upgrade fix', () => {
-    const issues = validateLegacy(makeConfig(), 'flat-legacy', {})
-    expect(issues).toHaveLength(1)
-    expect(issues[0]!.code).toBe(ErrorCode.LEGACY_FORMAT)
-    expect(issues[0]!.severity).toBe('warning')
-    expect(issues[0]!.fix).toBeDefined()
-  })
-
   test('v1 format returns LEGACY_FORMAT warning with v2 upgrade fix', () => {
     const issues = validateLegacy(makeConfig(), 'v1', {})
     expect(issues).toHaveLength(1)
@@ -29,16 +21,6 @@ describe('validateLegacy', () => {
   test('v2 format returns no legacy warnings', () => {
     const issues = validateLegacy(makeConfig(), 'v2', {})
     expect(issues).toHaveLength(0)
-  })
-
-  test('LEGACY_FORMAT warning has field "$"', () => {
-    const issues = validateLegacy(makeConfig(), 'flat-legacy', {})
-    expect(issues[0]!.field).toBe('$')
-  })
-
-  test('fix suggestion for flat-legacy mentions "accepts[] array"', () => {
-    const issues = validateLegacy(makeConfig(), 'flat-legacy', {})
-    expect(issues[0]!.fix).toContain('accepts[] array')
   })
 
   test('fix suggestion for v1 mentions "amount instead of maxAmountRequired"', () => {

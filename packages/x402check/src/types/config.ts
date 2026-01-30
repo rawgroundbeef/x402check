@@ -5,7 +5,7 @@
 /**
  * Config format discriminator
  */
-export type ConfigFormat = 'v2' | 'v1' | 'flat-legacy' | 'unknown'
+export type ConfigFormat = 'v2' | 'v1' | 'unknown'
 
 /**
  * HTTP resource definition
@@ -62,24 +62,6 @@ export interface V1Config {
   x402Version: 1
   accepts: V1AcceptsEntry[]
   error?: string | undefined
-  extensions?: Record<string, unknown> | undefined
-}
-
-/**
- * Flat legacy config (v1.0 validator format)
- */
-export interface FlatLegacyConfig {
-  payTo?: string | undefined
-  address?: string | undefined
-  amount?: string | undefined
-  minAmount?: string | undefined
-  network?: string | undefined
-  chain?: string | undefined
-  currency?: string | undefined
-  asset?: string | undefined
-  maxTimeoutSeconds?: number | undefined
-  payments?: Array<Record<string, unknown>> | undefined
-  extra?: Record<string, unknown> | undefined
   extensions?: Record<string, unknown> | undefined
 }
 
