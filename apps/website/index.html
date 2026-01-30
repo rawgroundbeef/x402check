@@ -1278,7 +1278,10 @@
         // 1. Verdict (always first)
         html += renderVerdict(validation, checks);
 
-        // 2. Response body (collapsed, URL only)
+        // 2. Errors, warnings, parsed config, raw config
+        html += renderDetails(validation, config);
+
+        // 3. Response body (collapsed, URL only)
         if (result.type === 'url' && result.rawBody) {
           let formattedBody = result.rawBody;
           try { formattedBody = JSON.stringify(JSON.parse(result.rawBody), null, 2); } catch(e) {}
@@ -1296,9 +1299,6 @@
               </button>
             </div>`;
         }
-
-        // 3. Errors, warnings, parsed config, raw config
-        html += renderDetails(validation, config);
       } else if (result.type === 'url') {
         if (result.config) {
           html += '<div class="error-card"><strong>Config found but validation failed</strong><br>Raw config: <pre>' + escapeHtml(JSON.stringify(result.config, null, 2)) + '</pre></div>';

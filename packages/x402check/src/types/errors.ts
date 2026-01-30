@@ -53,7 +53,7 @@ export const ErrorMessages = {
   // Structure errors
   INVALID_JSON: 'Input is not valid JSON',
   NOT_OBJECT: 'Input must be an object',
-  UNKNOWN_FORMAT: 'Config format could not be detected',
+  UNKNOWN_FORMAT: 'Missing required x402Version field (must be 1 or 2)',
 
   // Version errors
   MISSING_VERSION: 'Missing required field: x402Version',
