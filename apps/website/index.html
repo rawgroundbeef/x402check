@@ -25,6 +25,23 @@
       --info: #58a6ff;
     }
 
+    html[data-theme="light"] {
+      --bg-deep: #f5f7fa;
+      --bg-surface: #ffffff;
+      --bg-elevated: #eef1f5;
+      --border: #d0d7de;
+      --text-primary: #1f2328;
+      --text-secondary: #59636e;
+      --text-muted: #8b949e;
+      --accent: #00a86b;
+      --accent-dim: rgba(0, 168, 107, 0.12);
+      --error: #d1242f;
+      --error-dim: rgba(209, 36, 47, 0.1);
+      --warning: #9a6700;
+      --warning-dim: rgba(154, 103, 0, 0.1);
+      --info: #0969da;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -39,6 +56,7 @@
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.2s, color 0.2s;
     }
 
     .container {
@@ -56,7 +74,6 @@
     .logo {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
       font-size: 36px;
       font-weight: 700;
       margin-bottom: 8px;
@@ -73,9 +90,16 @@
       background-clip: text;
     }
 
+    html[data-theme="light"] .logo-check {
+      background: linear-gradient(135deg, var(--accent), #008c5a);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
     .logo-icon {
       width: 32px;
       height: 32px;
+      margin-right: 8px;
       background: var(--accent);
       border-radius: 8px;
       display: flex;
@@ -89,10 +113,6 @@
       color: var(--bg-deep);
     }
 
-    .tagline {
-      color: var(--text-secondary);
-      font-size: 16px;
-    }
 
     /* Card */
     .card {
@@ -104,7 +124,7 @@
 
     /* Examples Section */
     .examples-section {
-      border-bottom: 1px solid var(--border);
+      border-top: 1px solid var(--border);
     }
 
     .examples-header {
@@ -137,7 +157,7 @@
 
     .examples-content {
       padding: 20px;
-      background: rgba(0,0,0,0.2);
+      background: var(--bg-elevated);
     }
 
     /* Tabs */
@@ -189,6 +209,26 @@
     .code-block .string { color: #ce9178; }
     .code-block .number { color: #b5cea8; }
 
+    html[data-theme="light"] .code-block .key { color: #0451a5; }
+    html[data-theme="light"] .code-block .string { color: #a31515; }
+    html[data-theme="light"] .code-block .number { color: #098658; }
+
+    html[data-theme="light"] .code-block {
+      background: #ffffff;
+    }
+
+    html[data-theme="light"] .example-helper {
+      background: #ffffff;
+    }
+
+    html[data-theme="light"] .raw-content {
+      background: #ffffff;
+    }
+
+    html[data-theme="light"] .error-card pre {
+      background: #ffffff;
+    }
+
     .example-helper {
       font-size: 13px;
       color: var(--text-secondary);
@@ -220,13 +260,39 @@
       padding: 20px;
     }
 
-    .input-wrapper {
-      position: relative;
+    .method-toggle {
+      display: inline-flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .method-pill {
+      padding: 6px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .method-pill:hover {
+      color: var(--text-secondary);
+      border-color: var(--text-muted);
+    }
+
+    .method-pill.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border-color: var(--text-muted);
     }
 
     textarea {
       width: 100%;
-      height: 160px;
+      height: 140px;
       background: var(--bg-deep);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -247,46 +313,10 @@
       border-color: var(--accent);
     }
 
-    /* Controls */
-    .controls {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .method-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .method-label {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    select {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
     .validate-btn {
-      flex: 1;
-      min-width: 140px;
-      padding: 12px 24px;
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px 24px;
       background: var(--accent);
       border: none;
       border-radius: 10px;
@@ -312,8 +342,7 @@
 
     /* Results */
     .results {
-      border-top: 1px solid var(--border);
-      padding: 20px;
+      padding: 0;
     }
 
     .results.hidden {
@@ -482,12 +511,12 @@
 
     .issue-card.error {
       background: var(--error-dim);
-      border: 1px solid rgba(248, 81, 73, 0.3);
+      border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
     }
 
     .issue-card.warning {
       background: var(--warning-dim);
-      border: 1px solid rgba(210, 153, 34, 0.3);
+      border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
     }
 
     .issue-field {
@@ -543,9 +572,77 @@
       color: var(--accent);
     }
 
+    /* Fix with AI */
+    .fix-with-ai {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .fix-with-ai-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 4px 0;
+      list-style: none;
+    }
+
+    .fix-with-ai-header::-webkit-details-marker {
+      display: none;
+    }
+
+    .fix-with-ai-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .fix-with-ai-title:hover {
+      color: var(--text-primary);
+    }
+
+    .fix-with-ai[open] > .fix-with-ai-header .chevron {
+      transform: rotate(90deg);
+    }
+
+    .fix-with-ai .chevron {
+      font-size: 10px;
+      transition: transform 0.15s;
+    }
+
+    .fix-with-ai-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prompt-box {
+      margin-top: 8px;
+      padding: 12px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    html[data-theme="light"] .prompt-box {
+      background: #ffffff;
+    }
+
     .error-card {
       background: var(--error-dim);
-      border: 1px solid rgba(248, 81, 73, 0.3);
+      border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 16px;
@@ -709,7 +806,7 @@
 
     /* Result Card */
     .result-card {
-      padding: 24px 20px;
+      padding: 8px 20px 16px;
     }
 
     /* Verdict Line */
@@ -747,14 +844,14 @@
 
     /* Error Messages (shown directly, not expandable) */
     .error-messages {
-      margin-top: 16px;
+      margin-top: 8px;
     }
 
     .error-message {
       font-family: 'Outfit', sans-serif;
       font-size: 14px;
       color: var(--text-primary);
-      padding: 8px 0;
+      padding: 6px 0;
       border-bottom: 1px solid var(--border);
     }
 
@@ -769,11 +866,11 @@
 
     /* Expandable Sections */
     .expand-links {
-      margin-top: 16px;
+      margin-top: 12px;
     }
 
     .expand-section {
-      margin-bottom: 2px;
+      margin-bottom: 0;
     }
 
     .expand-link {
@@ -784,7 +881,7 @@
       font-size: 13px;
       color: var(--text-secondary);
       cursor: pointer;
-      padding: 6px 0;
+      padding: 4px 0;
       text-decoration: none;
       list-style: none;
     }
@@ -887,7 +984,7 @@
 
     .integration-card {
       background: var(--bg-surface);
-      border: 1px solid var(--border);
+      border: 1px solid color-mix(in srgb, var(--text-muted) 60%, transparent);
       border-radius: 12px;
       padding: 24px;
       text-align: center;
@@ -1111,9 +1208,75 @@
         justify-content: center;
       }
     }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1000;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+      padding: 0;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Dark mode: show sun icon (to switch to light) */
+    .theme-toggle .icon-sun { display: block; }
+    .theme-toggle .icon-moon { display: none; }
+
+    /* Light mode: show moon icon (to switch to dark) */
+    html[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+    html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
   </style>
+  <script>
+    // Apply theme before first paint to prevent flash
+    (function() {
+      var saved = localStorage.getItem('x402check-theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
 </head>
 <body>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode">
+    <svg class="icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+    </svg>
+  </button>
   <div class="container">
     <!-- Header -->
     <header class="header">
@@ -1123,13 +1286,28 @@
         </span>
         <span class="logo-402">x402</span><span class="logo-check">check</span>
       </div>
-      <p class="tagline">Validate your x402 payment config in seconds</p>
     </header>
 
     <!-- Main Card -->
     <div class="card">
+      <!-- Input -->
+      <div class="input-section">
+        <div class="method-toggle" id="method-toggle">
+          <button class="method-pill active" data-method="GET">GET</button>
+          <button class="method-pill" data-method="POST">POST</button>
+        </div>
+        <textarea id="input" placeholder="Paste a URL or JSON config..."></textarea>
+        <button class="validate-btn" id="validate">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          Validate
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div class="results hidden" id="results"></div>
+
       <!-- Examples -->
-      <details class="examples-section">
+      <details class="examples-section" id="examples-section">
         <summary class="examples-header">
           <span>See Example Configs</span>
           <span class="arrow">▶</span>
@@ -1205,32 +1383,6 @@
           <button class="load-btn" id="load-example">Load into validator</button>
         </div>
       </details>
-
-      <!-- Input -->
-      <div class="input-section">
-        <div class="input-wrapper">
-          <textarea id="input" placeholder="Paste a URL or JSON config..."></textarea>
-        </div>
-
-        <div class="controls">
-          <div class="method-group">
-            <span class="method-label">Method:</span>
-            <select id="method">
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-            </select>
-          </div>
-          <button class="validate-btn" id="validate">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-            Validate
-          </button>
-        </div>
-      </div>
-
-      <!-- Results -->
-      <div class="results hidden" id="results"></div>
     </div>
 
     <!-- Integration Cards -->
@@ -1462,6 +1614,16 @@
 
   <div class="copy-toast" id="copy-toast" style="display:none;">Copied npm i x402check</div>
 
+  <script>
+    // Theme toggle
+    document.getElementById('themeToggle').addEventListener('click', function() {
+      var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      var next = isLight ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('x402check-theme', next);
+    });
+  </script>
+
   <!-- Scripts: SDK IIFE bundle + input handler with adapter -->
   <script src="https://cdn.jsdelivr.net/npm/x402check@0.0.1/dist/index.iife.js"></script>
   <script src="input.js"></script>
@@ -1469,10 +1631,19 @@
   <script>
     // Elements
     const inputEl = document.getElementById('input');
-    const methodEl = document.getElementById('method');
     const validateBtn = document.getElementById('validate');
     const resultsEl = document.getElementById('results');
     const loadExampleBtn = document.getElementById('load-example');
+
+    // Method pill toggle
+    let currentMethod = 'GET';
+    document.getElementById('method-toggle').addEventListener('click', function(e) {
+      const pill = e.target.closest('.method-pill');
+      if (!pill) return;
+      currentMethod = pill.dataset.method;
+      this.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+    });
 
     // Example configs
     const examples = {
@@ -1563,7 +1734,7 @@
       validateBtn.innerHTML = '<span>Validating...</span>';
 
       try {
-        await handleValidation(value, methodEl.value, displayResults, displayError);
+        await handleValidation(value, currentMethod, displayResults, displayError);
       } catch (e) {
         displayError(e.message);
       } finally {
@@ -1714,13 +1885,47 @@
         </details>`;
       }
 
-      // Example configs link (on invalid)
-      if (!validation.valid) {
-        html += `<a href="#" class="expand-link" onclick="document.querySelector('.examples-section').open = true; return false;"><span class="chevron">\u25B8</span> View example configs</a>`;
+      html += '</div>';
+
+      // Fix with AI (only on errors)
+      if (!validation.valid && validation.errors.length > 0) {
+        const configStr = config ? JSON.stringify(config, null, 2) : inputEl.value.trim();
+        const prompt = generateFixPrompt(validation.errors, validation.warnings, configStr);
+        html += `<details class="fix-with-ai">
+          <summary class="fix-with-ai-header">
+            <span class="fix-with-ai-title"><span class="chevron">\u25B8</span> Fix with AI</span>
+            <div class="fix-with-ai-actions">
+              <button class="copy-btn" onclick="event.stopPropagation(); copyFixPrompt(this);">Copy prompt</button>
+            </div>
+          </summary>
+          <pre class="prompt-box" id="fix-prompt">${escapeHtml(prompt)}</pre>
+        </details>`;
       }
 
-      html += '</div>';
       return html;
+    }
+
+    function generateFixPrompt(errors, warnings, configStr) {
+      var errorList = errors.map(function(e) { return '- ' + e.message; }).join('\n');
+      var warningList = '';
+      if (warnings.length > 0) {
+        warningList = '\n\nWarnings:\n' + warnings.map(function(w) { return '- ' + w.message; }).join('\n');
+      }
+      return 'My x402 config is failing validation.\n\nErrors:\n' + errorList + warningList + '\n\nHere\'s my current config:\n```json\n' + configStr + '\n```\n\nPlease fix this to be x402 v2 compliant. The v2 format requires:\n- "x402Version": 2\n- "accepts" array with payment options\n- Each entry needs: "scheme", "network" (CAIP-2 format), "payTo", "asset", "amount" (string)\n- Optional: "maxTimeoutSeconds", "resource.url", "extensions"\n\nReturn the corrected JSON.';
+    }
+
+    function copyFixPrompt(btn) {
+      var el = document.getElementById('fix-prompt');
+      if (el) {
+        navigator.clipboard.writeText(el.textContent).then(function() {
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(function() {
+            btn.textContent = 'Copy prompt';
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      }
     }
 
     function displayError(message) {
@@ -1736,9 +1941,6 @@
           </div>
           <div class="error-messages">
             <div class="error-message">${message}</div>
-          </div>
-          <div class="expand-links">
-            <a href="#" class="expand-link" onclick="document.querySelector('.examples-section').open = true; return false;"><span class="chevron">\u25B8</span> View example configs</a>
           </div>
         </div>`;
       resultsEl.classList.remove('hidden');
