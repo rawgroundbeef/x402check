@@ -20,5 +20,9 @@ export { validateAddress, validateEvmAddress, validateSolanaAddress } from './va
 export { validate } from './validation'
 export type { ValidationOptions } from './validation'
 
+// Re-export HTTP config extraction
+export { extractConfig } from './extraction'
+export type { ExtractionResult, ExtractionSource, ResponseLike } from './extraction'
+
 // Version constant
-export const VERSION = '0.0.1' as const
+export const VERSION = '0.1.0' as const
