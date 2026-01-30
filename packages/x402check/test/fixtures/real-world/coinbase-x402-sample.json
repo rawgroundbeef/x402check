@@ -1,0 +1,21 @@
+{
+  "x402Version": 2,
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "amount": "100000",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+      "maxTimeoutSeconds": 300,
+      "extra": {
+        "name": "Example API",
+        "version": "1.0.0"
+      }
+    }
+  ],
+  "resource": {
+    "url": "https://api.example.com/v1/premium-data",
+    "method": "GET"
+  }
+}

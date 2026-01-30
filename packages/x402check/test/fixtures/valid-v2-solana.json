@@ -1,0 +1,12 @@
+{
+  "x402Version": 2,
+  "accepts": [{
+    "scheme": "exact",
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    "amount": "1000000",
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "payTo": "11111111111111111111111111111111",
+    "maxTimeoutSeconds": 60
+  }],
+  "resource": { "url": "https://example.com/api/premium" }
+}
