@@ -978,67 +978,81 @@
         </summary>
         <div class="examples-content">
           <div class="tabs">
-            <button class="tab active" data-tab="flat">Flat (Legacy)</button>
-            <button class="tab" data-tab="v1">accepts (v1)</button>
-            <button class="tab" data-tab="v2">v2 (Canonical)</button>
+            <button class="tab active" data-tab="v2">v2 (Recommended)</button>
+            <button class="tab" data-tab="v1">v1</button>
+            <button class="tab" data-tab="flat">Flat (Legacy)</button>
             <button class="tab" data-tab="marketplace">+ Marketplace</button>
           </div>
 
-          <div id="example-flat" class="example-panel">
+          <div id="example-v2" class="example-panel">
             <div class="code-block">{
-  <span class="key">"amount"</span>: <span class="number">0.025</span>,
-  <span class="key">"currency"</span>: <span class="string">"USDC"</span>,
-  <span class="key">"network"</span>: <span class="string">"solana"</span>,
-  <span class="key">"payTo"</span>: <span class="string">"5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz"</span>
+  <span class="key">"x402Version"</span>: <span class="number">2</span>,
+  <span class="key">"resource"</span>: {
+    <span class="key">"url"</span>: <span class="string">"https://api.example.com/endpoint"</span>
+  },
+  <span class="key">"accepts"</span>: [{
+    <span class="key">"scheme"</span>: <span class="string">"exact"</span>,
+    <span class="key">"network"</span>: <span class="string">"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"</span>,
+    <span class="key">"payTo"</span>: <span class="string">"5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz"</span>,
+    <span class="key">"asset"</span>: <span class="string">"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"</span>,
+    <span class="key">"amount"</span>: <span class="string">"25000"</span>,
+    <span class="key">"maxTimeoutSeconds"</span>: <span class="number">300</span>
+  }]
 }</div>
-            <div class="example-helper">Minimal format. Works but consider upgrading to v2 for multi-chain support.</div>
+            <div class="example-helper">Canonical v2 format. Recommended for all new endpoints.</div>
           </div>
 
           <div id="example-v1" class="example-panel" style="display: none;">
             <div class="code-block">{
+  <span class="key">"x402Version"</span>: <span class="number">1</span>,
   <span class="key">"accepts"</span>: [{
-    <span class="key">"network"</span>: <span class="string">"solana"</span>,
+    <span class="key">"scheme"</span>: <span class="string">"exact"</span>,
+    <span class="key">"network"</span>: <span class="string">"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"</span>,
     <span class="key">"payTo"</span>: <span class="string">"5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz"</span>,
     <span class="key">"maxAmountRequired"</span>: <span class="string">"25000"</span>,
     <span class="key">"asset"</span>: <span class="string">"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"</span>
   }]
 }</div>
-            <div class="example-helper">v1 format used by x402-jobs. Amount in micro-units (25000 = 0.025 USDC).</div>
+            <div class="example-helper">v1 format. Uses maxAmountRequired instead of amount. Consider upgrading to v2.</div>
           </div>
 
-          <div id="example-v2" class="example-panel" style="display: none;">
+          <div id="example-flat" class="example-panel" style="display: none;">
             <div class="code-block">{
-  <span class="key">"x402Version"</span>: <span class="number">1</span>,
-  <span class="key">"payments"</span>: [{
-    <span class="key">"chain"</span>: <span class="string">"solana"</span>,
-    <span class="key">"address"</span>: <span class="string">"5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz"</span>,
-    <span class="key">"asset"</span>: <span class="string">"USDC"</span>,
-    <span class="key">"minAmount"</span>: <span class="string">"0.025"</span>
-  }]
+  <span class="key">"amount"</span>: <span class="string">"25000"</span>,
+  <span class="key">"currency"</span>: <span class="string">"USDC"</span>,
+  <span class="key">"network"</span>: <span class="string">"solana"</span>,
+  <span class="key">"payTo"</span>: <span class="string">"5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz"</span>
 }</div>
-            <div class="example-helper">Canonical v2 format. Recommended for new endpoints.</div>
+            <div class="example-helper">Legacy flat format. Works but deprecated. Click 'Show v2 equivalent' to upgrade.</div>
           </div>
 
           <div id="example-marketplace" class="example-panel" style="display: none;">
             <div class="code-block">{
-  <span class="key">"x402Version"</span>: <span class="number">1</span>,
-  <span class="key">"payments"</span>: [{
-    <span class="key">"chain"</span>: <span class="string">"base"</span>,
-    <span class="key">"address"</span>: <span class="string">"0x1234567890abcdef1234567890abcdef12345678"</span>,
-    <span class="key">"asset"</span>: <span class="string">"USDC"</span>,
-    <span class="key">"minAmount"</span>: <span class="string">"0.01"</span>
-  }],
-  <span class="key">"outputSchema"</span>: {
-    <span class="key">"type"</span>: <span class="string">"object"</span>,
-    <span class="key">"properties"</span>: { <span class="key">"result"</span>: { <span class="key">"type"</span>: <span class="string">"string"</span> } }
+  <span class="key">"x402Version"</span>: <span class="number">2</span>,
+  <span class="key">"resource"</span>: {
+    <span class="key">"url"</span>: <span class="string">"https://api.example.com/endpoint"</span>
   },
-  <span class="key">"metadata"</span>: {
-    <span class="key">"name"</span>: <span class="string">"My API"</span>,
-    <span class="key">"description"</span>: <span class="string">"Does something useful"</span>,
-    <span class="key">"category"</span>: <span class="string">"ai"</span>
+  <span class="key">"accepts"</span>: [{
+    <span class="key">"scheme"</span>: <span class="string">"exact"</span>,
+    <span class="key">"network"</span>: <span class="string">"eip155:8453"</span>,
+    <span class="key">"payTo"</span>: <span class="string">"0x1234567890abcdef1234567890abcdef12345678"</span>,
+    <span class="key">"asset"</span>: <span class="string">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span>,
+    <span class="key">"amount"</span>: <span class="string">"10000"</span>,
+    <span class="key">"maxTimeoutSeconds"</span>: <span class="number">300</span>
+  }],
+  <span class="key">"extensions"</span>: {
+    <span class="key">"outputSchema"</span>: {
+      <span class="key">"type"</span>: <span class="string">"object"</span>,
+      <span class="key">"properties"</span>: { <span class="key">"result"</span>: { <span class="key">"type"</span>: <span class="string">"string"</span> } }
+    },
+    <span class="key">"metadata"</span>: {
+      <span class="key">"name"</span>: <span class="string">"My API"</span>,
+      <span class="key">"description"</span>: <span class="string">"Does something useful"</span>,
+      <span class="key">"category"</span>: <span class="string">"ai"</span>
+    }
   }
 }</div>
-            <div class="example-helper">v2 + marketplace metadata. Required for x402jobs listing.</div>
+            <div class="example-helper">v2 + marketplace metadata in extensions. Required for x402jobs listing.</div>
           </div>
 
           <button class="load-btn" id="load-example">Load into validator</button>
@@ -1153,50 +1167,64 @@
 
     // Example configs
     const examples = {
-      flat: `{
-  "amount": 0.025,
-  "currency": "USDC",
-  "network": "solana",
-  "payTo": "5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz"
+      v2: `{
+  "x402Version": 2,
+  "resource": {
+    "url": "https://api.example.com/endpoint"
+  },
+  "accepts": [{
+    "scheme": "exact",
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    "payTo": "5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz",
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "25000",
+    "maxTimeoutSeconds": 300
+  }]
 }`,
       v1: `{
+  "x402Version": 1,
   "accepts": [{
-    "network": "solana",
+    "scheme": "exact",
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
     "payTo": "5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz",
     "maxAmountRequired": "25000",
     "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
   }]
 }`,
-      v2: `{
-  "x402Version": 1,
-  "payments": [{
-    "chain": "solana",
-    "address": "5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz",
-    "asset": "USDC",
-    "minAmount": "0.025"
-  }]
+      flat: `{
+  "amount": "25000",
+  "currency": "USDC",
+  "network": "solana",
+  "payTo": "5F5Yy9qJov8xK67vEWRoZHppWHEmH3WuG7mSfvLuqUTz"
 }`,
       marketplace: `{
-  "x402Version": 1,
-  "payments": [{
-    "chain": "base",
-    "address": "0x1234567890abcdef1234567890abcdef12345678",
-    "asset": "USDC",
-    "minAmount": "0.01"
-  }],
-  "outputSchema": {
-    "type": "object",
-    "properties": { "result": { "type": "string" } }
+  "x402Version": 2,
+  "resource": {
+    "url": "https://api.example.com/endpoint"
   },
-  "metadata": {
-    "name": "My API",
-    "description": "Does something useful",
-    "category": "ai"
+  "accepts": [{
+    "scheme": "exact",
+    "network": "eip155:8453",
+    "payTo": "0x1234567890abcdef1234567890abcdef12345678",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "amount": "10000",
+    "maxTimeoutSeconds": 300
+  }],
+  "extensions": {
+    "outputSchema": {
+      "type": "object",
+      "properties": { "result": { "type": "string" } }
+    },
+    "metadata": {
+      "name": "My API",
+      "description": "Does something useful",
+      "category": "ai"
+    }
   }
 }`
     };
 
-    let currentTab = 'flat';
+    let currentTab = 'v2';
 
     // Tab switching
     document.querySelectorAll('.tab').forEach(tab => {
