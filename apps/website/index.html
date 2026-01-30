@@ -1347,10 +1347,10 @@
 
       // Format detection
       const formatLabels = {
-        'flat': 'Flat (Legacy)',
         'v1': 'v1 (accepts)',
         'v2': 'v2 (Canonical)',
-        'v2-marketplace': 'v2 + Marketplace'
+        'v2-marketplace': 'v2 + Marketplace',
+        'unknown': 'Unknown'
       };
       const formatClass = validation.detectedFormat.startsWith('v2') ? 'v2' : validation.detectedFormat;
       html += `<div class="verdict-format">

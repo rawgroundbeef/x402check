@@ -105,7 +105,6 @@ function mapVersionToFormat(version, normalized) {
   const map = {
     'v2': 'v2',
     'v1': 'v1',
-    'flat-legacy': 'flat',
     'unknown': 'unknown'
   };
   return map[version] || 'unknown';
