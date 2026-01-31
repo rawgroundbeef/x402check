@@ -171,6 +171,7 @@
     .arrow {
       transition: transform 0.15s;
       color: var(--text-muted);
+      user-select: none;
     }
 
     .examples-content {
@@ -281,7 +282,7 @@
     .method-toggle {
       display: inline-flex;
       gap: 6px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
 
     .method-pill {
@@ -289,7 +290,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
       font-weight: 600;
-      border-radius: 6px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.15s;
       border: 1px solid var(--border);
@@ -303,14 +304,15 @@
     }
 
     .method-pill.active {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      border-color: var(--text-muted);
+      background: var(--accent);
+      color: var(--bg-deep);
+      border-color: var(--accent);
     }
 
     textarea {
       width: 100%;
       height: 48px;
+      margin: 0;
       background: var(--bg-deep);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -333,7 +335,7 @@
 
     .validate-btn {
       width: 100%;
-      margin-top: 12px;
+      margin-top: 8px;
       padding: 14px 24px;
       background: var(--accent);
       border: none;
@@ -793,6 +795,10 @@
 
     .faq-item[open] .faq-question {
       border-bottom: 1px solid var(--border);
+    }
+
+    .faq-item[open] .arrow {
+      transform: rotate(90deg);
     }
 
     .faq-answer {
