@@ -10,6 +10,29 @@ Validate [x402](https://www.x402.org/) payment configurations. Works in Node, br
 npm i x402check
 ```
 
+## CLI
+
+Validate configs from the command line — no code required.
+
+```
+npx x402check '{"x402Version":2,"accepts":[...]}'
+npx x402check config.json
+npx x402check https://api.example.com/resource
+echo '...' | npx x402check
+```
+
+Flags:
+
+| Flag | Description |
+|------|-------------|
+| `--strict` | Promote all warnings to errors |
+| `--json` | Output raw JSON (for piping) |
+| `--quiet` | Suppress output, exit code only |
+
+Exit codes: `0` valid, `1` invalid, `2` input error.
+
+Install globally with `npm i -g x402check` to use `x402check` directly.
+
 ## Quick start
 
 ```js
@@ -34,6 +57,30 @@ result.normalized // canonical v2 config
 ```
 
 ## API
+
+### `check(response, options?)`
+
+All-in-one: extracts config from an HTTP 402 response, validates it, and enriches with registry data (network names, asset symbols, decimals).
+
+```js
+import { check } from 'x402check'
+
+const res = await fetch(url)
+const result = check({
+  body: await res.json(),
+  headers: res.headers
+})
+
+result.extracted   // true | false
+result.source      // 'body' | 'header' | null
+result.valid       // true | false
+result.errors      // ValidationIssue[]
+result.warnings    // ValidationIssue[]
+result.summary     // AcceptSummary[] — display-ready payment options
+result.normalized  // canonical v2 config
+```
+
+Each `summary` entry includes `networkName`, `assetSymbol`, `assetDecimals`, and other registry-resolved fields.
 
 ### `validate(input, options?)`
 
