@@ -3,7 +3,7 @@ import { VERSION } from '../src/index'
 
 describe('x402check package', () => {
   it('exports VERSION constant', () => {
-    expect(VERSION).toBe('0.2.0')
+    expect(VERSION).toBe('0.3.0')
   })
 
   it('exports are defined', async () => {

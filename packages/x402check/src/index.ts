@@ -28,4 +28,4 @@ export type { ExtractionResult, ExtractionSource, ResponseLike } from './extract
 export { check } from './check'
 
 // Version constant
-export const VERSION = '0.2.0' as const
+export const VERSION = '0.3.0' as const

@@ -27,4 +27,17 @@ export default defineConfig([
     outDir: 'dist',
     external: [],
   },
+  // CLI binary
+  {
+    entry: ['./src/cli.ts'],
+    format: ['esm'],
+    platform: 'node',
+    banner: { js: '#!/usr/bin/env node' },
+    dts: false,
+    sourcemap: false,
+    minify: false,
+    clean: false,
+    outDir: 'dist',
+    external: [],
+  },
 ])
