@@ -7,6 +7,7 @@
 // Allowed origins for CORS requests
 const allowedOrigins = [
   'https://x402check.com',
+  'https://www.x402check.com',
   'https://x402check.pages.dev',
   'http://localhost:8000',
   'http://localhost:8080',
