@@ -368,6 +368,43 @@ describe('error code coverage', () => {
       }),
     )
 
+    // INVALID_BAZAAR_INFO, INVALID_BAZAAR_SCHEMA, INVALID_BAZAAR_INFO_INPUT
+    collect(
+      validate({
+        x402Version: 2,
+        accepts: [
+          {
+            scheme: 'exact',
+            network: 'eip155:8453',
+            amount: '1000000',
+            asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+            payTo: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
+            maxTimeoutSeconds: 60,
+          },
+        ],
+        resource: { url: 'https://example.com' },
+        extensions: { bazaar: { info: {} } },
+      }),
+    )
+    // INVALID_OUTPUT_SCHEMA, INVALID_OUTPUT_SCHEMA_INPUT
+    collect(
+      validate({
+        x402Version: 2,
+        accepts: [
+          {
+            scheme: 'exact',
+            network: 'eip155:8453',
+            amount: '1000000',
+            asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+            payTo: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
+            maxTimeoutSeconds: 60,
+            outputSchema: { input: {} },
+          },
+        ],
+        resource: { url: 'https://example.com' },
+      }),
+    )
+
     // Now verify every ErrorCode is in codesSeen
     const allErrorCodes = Object.values(ErrorCode) as string[]
     const missing = allErrorCodes.filter((code) => !codesSeen.has(code))

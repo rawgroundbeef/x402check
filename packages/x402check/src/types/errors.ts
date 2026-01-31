@@ -37,6 +37,14 @@ export const ErrorCode = {
   INVALID_SOLANA_ADDRESS: 'INVALID_SOLANA_ADDRESS',
   ADDRESS_NETWORK_MISMATCH: 'ADDRESS_NETWORK_MISMATCH',
 
+  // Extension / schema warnings
+  INVALID_BAZAAR_INFO: 'INVALID_BAZAAR_INFO',
+  INVALID_BAZAAR_SCHEMA: 'INVALID_BAZAAR_SCHEMA',
+  INVALID_BAZAAR_INFO_INPUT: 'INVALID_BAZAAR_INFO_INPUT',
+  INVALID_OUTPUT_SCHEMA: 'INVALID_OUTPUT_SCHEMA',
+  INVALID_OUTPUT_SCHEMA_INPUT: 'INVALID_OUTPUT_SCHEMA_INPUT',
+  MISSING_INPUT_SCHEMA: 'MISSING_INPUT_SCHEMA',
+
   // Warning codes
   UNKNOWN_NETWORK: 'UNKNOWN_NETWORK',
   UNKNOWN_ASSET: 'UNKNOWN_ASSET',
@@ -83,6 +91,14 @@ export const ErrorMessages = {
   NO_EVM_CHECKSUM: 'EVM address is all-lowercase with no checksum protection',
   INVALID_SOLANA_ADDRESS: 'Invalid Solana address format',
   ADDRESS_NETWORK_MISMATCH: 'Address format does not match network type',
+
+  // Extension / schema warnings
+  INVALID_BAZAAR_INFO: 'extensions.bazaar.info must be an object with input and output',
+  INVALID_BAZAAR_SCHEMA: 'extensions.bazaar.schema must be a valid JSON Schema object',
+  INVALID_BAZAAR_INFO_INPUT: 'extensions.bazaar.info.input must include type and method',
+  INVALID_OUTPUT_SCHEMA: 'accepts[i].outputSchema must be an object with input and output',
+  INVALID_OUTPUT_SCHEMA_INPUT: 'accepts[i].outputSchema.input must include type and method',
+  MISSING_INPUT_SCHEMA: 'No input schema found (no bazaar extension or outputSchema) -- consider adding one so agents know how to call your API',
 
   // Warnings
   UNKNOWN_NETWORK: 'Network is not in the known registry -- config may still work but cannot be fully validated',

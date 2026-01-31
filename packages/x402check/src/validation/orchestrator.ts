@@ -21,6 +21,9 @@ import {
   validateAmount,
   validateTimeout,
   validateLegacy,
+  validateBazaar,
+  validateOutputSchema,
+  validateMissingSchema,
 } from './rules'
 
 /**
@@ -178,6 +181,11 @@ function runPipeline(
 
   // ── Level 5: Legacy ─────────────────────────────────────────────────
   warnings.push(...validateLegacy(normalized, format, parsed))
+
+  // ── Level 6: Extensions ────────────────────────────────────────────
+  warnings.push(...validateBazaar(normalized))
+  warnings.push(...validateOutputSchema(parsed))
+  warnings.push(...validateMissingSchema(normalized, parsed))
 
   // ── Strict Mode ─────────────────────────────────────────────────────
   if (options?.strict === true) {

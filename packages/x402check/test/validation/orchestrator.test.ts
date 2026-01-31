@@ -479,7 +479,18 @@ describe('validate()', () => {
     })
 
     test('strict mode with no warnings returns valid:true', () => {
-      const strict = validate(v2Config(), { strict: true })
+      const config = v2Config({
+        extensions: {
+          bazaar: {
+            info: {
+              input: { type: 'application/json', method: 'POST' },
+              output: { type: 'application/json' },
+            },
+            schema: { type: 'object', properties: {} },
+          },
+        },
+      })
+      const strict = validate(config, { strict: true })
       expect(strict.valid).toBe(true)
     })
 
