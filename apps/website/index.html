@@ -725,6 +725,37 @@
       color: var(--text-secondary);
     }
 
+    /* Section link */
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-link {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px;
+      display: inline-flex;
+      align-items: center;
+      transition: color 0.15s;
+    }
+
+    .section-link:hover {
+      color: var(--text-primary);
+    }
+
+    .section-link.copied {
+      color: var(--accent);
+    }
+
+    .section-link svg {
+      width: 14px;
+      height: 14px;
+    }
+
     /* FAQ */
     .faq-section {
       margin-top: 40px;
@@ -1501,8 +1532,8 @@
     </div>
 
     <!-- Integration Cards -->
-    <div class="integrations-section">
-      <div class="integrations-header">Integrate</div>
+    <div class="integrations-section" id="integrate">
+      <div class="integrations-header section-heading">Integrate<button class="section-link" data-hash="#integrate" aria-label="Copy link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></button></div>
       <div class="integrations-grid">
         <div class="integration-card available" id="npm-card">
           <div class="integration-header"><span class="integration-icon">📦</span><span class="integration-title">npm</span></div>
@@ -1533,15 +1564,15 @@
 
     <!-- Define Your Schema -->
     <div class="schema-section" id="schema-section">
-      <div class="schema-header">Define Your Schema</div>
+      <div class="schema-header section-heading">Define Your Schema<button class="section-link" data-hash="#schema-section" aria-label="Copy link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></button></div>
       <p class="schema-intro">
         When an agent pays for your resource, it needs to know <em>how to call it</em> &mdash; what parameters to send and what response to expect. x402 has two ways to declare this: the V2 Bazaar extension (recommended) and the V1 outputSchema field.
       </p>
 
       <!-- V2 Bazaar -->
-      <div class="schema-card">
+      <div class="schema-card" id="v2-bazaar">
         <div class="schema-card-title">
-          <h3>V2 Bazaar Extension</h3>
+          <h3 class="section-heading">V2 Bazaar Extension<button class="section-link" data-hash="#v2-bazaar" aria-label="Copy link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></button></h3>
           <span class="schema-badge recommended">Recommended</span>
         </div>
         <p class="schema-card-desc">
@@ -1592,9 +1623,9 @@
       </div>
 
       <!-- V1 outputSchema -->
-      <div class="schema-card">
+      <div class="schema-card" id="v1-output-schema">
         <div class="schema-card-title">
-          <h3>V1 outputSchema</h3>
+          <h3 class="section-heading">V1 outputSchema<button class="section-link" data-hash="#v1-output-schema" aria-label="Copy link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></button></h3>
           <span class="schema-badge legacy">Legacy</span>
         </div>
         <p class="schema-card-desc">
@@ -1647,8 +1678,8 @@
     </div>
 
     <!-- FAQ -->
-    <div class="faq-section">
-      <h2 class="faq-title">FAQ</h2>
+    <div class="faq-section" id="faq">
+      <h2 class="faq-title section-heading">FAQ<button class="section-link" data-hash="#faq" aria-label="Copy link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></button></h2>
 
       <details class="faq-item">
         <summary class="faq-question">
@@ -2133,6 +2164,23 @@
           btn.classList.add('copied');
           setTimeout(function() {
             btn.innerHTML = copyIcon;
+            btn.classList.remove('copied');
+          }, 1500);
+        });
+      });
+    });
+    // Section link copy
+    var linkIcon = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>';
+    document.querySelectorAll('.section-link').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var hash = btn.getAttribute('data-hash');
+        var url = window.location.origin + window.location.pathname + hash;
+        navigator.clipboard.writeText(url).then(function() {
+          btn.innerHTML = checkIcon;
+          btn.classList.add('copied');
+          setTimeout(function() {
+            btn.innerHTML = linkIcon;
             btn.classList.remove('copied');
           }, 1500);
         });
