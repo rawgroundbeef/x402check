@@ -43,8 +43,8 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Manifest types, extended ConfigFormat, guards, and detection order
-- [ ] 11-02-PLAN.md — Wild manifest normalization and comprehensive tests
+- [x] 11-01-PLAN.md — Manifest types, extended ConfigFormat, guards, and detection order
+- [x] 11-02-PLAN.md — Wild manifest normalization and comprehensive tests
 
 **Requirements:**
 - MAN-01: Manifest schema definition (collection of v2 PaymentRequired entries with service metadata)
@@ -177,10 +177,10 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 
 | Requirement | ID | Phase | Status |
 |-------------|-----|-------|--------|
-| Manifest schema definition | MAN-01 | Phase 11 | Pending |
+| Manifest schema definition | MAN-01 | Phase 11 | Complete |
 | Manifest detection & validation | MAN-02 | Phase 13 | Pending |
 | Full bazaar extension validation | MAN-03 | Phase 13 | Pending |
-| Wild manifest compatibility | MAN-04 | Phase 11 | Pending |
+| Wild manifest compatibility | MAN-04 | Phase 11 | Complete |
 | Stacks chain address validation | MAN-05 | Phase 12 | Pending |
 | CLI with auto-detection | MAN-06 | Phase 14 | Pending |
 | npm publish to registry | MAN-07 | Phase 16 | Pending |
@@ -203,7 +203,7 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 | 8. Validation Rules & Orchestrator | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 9. Build Pipeline | v2.0 | 1/1 | Complete | 2026-01-29 |
 | 10. Website Integration | v2.0 | 2/2 | Complete | 2026-01-29 |
-| 11. Manifest Types & Detection | v3.0 | 0/2 | In Progress | -- |
+| 11. Manifest Types & Detection | v3.0 | 2/2 | Complete | 2026-02-04 |
 | 12. Stacks Chain Support | v3.0 | -- | Pending | -- |
 | 13. Manifest Validation | v3.0 | -- | Pending | -- |
 | 14. CLI Manifest Mode | v3.0 | -- | Pending | -- |
@@ -212,4 +212,4 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-02-04 -- Phase 11 planned (2 plans in 2 waves)*
+*Last updated: 2026-02-04 -- Phase 11 complete (2/2 plans, verified)*
