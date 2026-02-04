@@ -7,6 +7,7 @@
 import { getNetworkNamespace } from '../registries/networks'
 import { validateEvmAddress } from './evm-address'
 import { validateSolanaAddress } from './solana-address'
+import { validateStacksAddress } from './stacks-address'
 import type { ValidationIssue } from '../types/validation'
 
 /**
@@ -46,6 +47,9 @@ export function validateAddress(
 
     case 'solana':
       return validateSolanaAddress(address, field)
+
+    case 'stacks':
+      return validateStacksAddress(address, network, field)
 
     case 'stellar':
     case 'aptos':

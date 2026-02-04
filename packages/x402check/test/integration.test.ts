@@ -414,6 +414,7 @@ describe('error code coverage', () => {
     //  MISSING_VERSION: normalize always sets version, detection catches unknown formats)
     // INVALID_VERSION: only reachable if normalization produces bad version, tested in unit tests
     // Manifest error codes: not yet exercised (manifest validation is Phase 13)
+    // INVALID_STACKS_ADDRESS and STACKS_NETWORK_MISMATCH: Phase 12 added, need test fixtures
     const expectedUnreachableFromPipeline = [
       'ADDRESS_NETWORK_MISMATCH',
       'MISSING_VERSION',
@@ -427,6 +428,8 @@ describe('error code coverage', () => {
       'WILD_MANIFEST_ARRAY_FORMAT',
       'WILD_MANIFEST_NESTED_FORMAT',
       'WILD_MANIFEST_NAME_PROMOTED',
+      'INVALID_STACKS_ADDRESS',
+      'STACKS_NETWORK_MISMATCH',
     ]
     const trulyMissing = missing.filter((m) => !expectedUnreachableFromPipeline.includes(m))
     expect(trulyMissing).toEqual([])

@@ -43,6 +43,26 @@ describe('validateAddress', () => {
     })
   })
 
+  describe('Stacks addresses on Stacks networks', () => {
+    test('valid mainnet address (SP) on stacks:1', () => {
+      const issues = validateAddress(
+        'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7',
+        'stacks:1',
+        'accepts[0].payTo'
+      )
+      expect(issues).toHaveLength(0)
+    })
+
+    test('valid testnet address (ST) on stacks:2147483648', () => {
+      const issues = validateAddress(
+        'ST000000000000000000002AMW42H',
+        'stacks:2147483648',
+        'accepts[0].payTo'
+      )
+      expect(issues).toHaveLength(0)
+    })
+  })
+
   describe('cross-chain mismatches', () => {
     test('EVM address on Solana network produces error', () => {
       const issues = validateAddress(
@@ -66,6 +86,30 @@ describe('validateAddress', () => {
       expect(issues.length).toBeGreaterThan(0)
       expect(issues.some((i) => i.severity === 'error')).toBe(true)
       expect(issues[0]?.code).toBe(ErrorCode.INVALID_EVM_ADDRESS)
+    })
+
+    test('Stacks address on EVM network produces error', () => {
+      const issues = validateAddress(
+        'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7',
+        'eip155:8453',
+        'accepts[0].payTo'
+      )
+
+      expect(issues.length).toBeGreaterThan(0)
+      expect(issues.some((i) => i.severity === 'error')).toBe(true)
+      expect(issues[0]?.code).toBe(ErrorCode.INVALID_EVM_ADDRESS)
+    })
+
+    test('EVM address on Stacks network produces error', () => {
+      const issues = validateAddress(
+        '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
+        'stacks:1',
+        'accepts[0].payTo'
+      )
+
+      expect(issues.length).toBeGreaterThan(0)
+      expect(issues.some((i) => i.severity === 'error')).toBe(true)
+      expect(issues[0]?.code).toBe(ErrorCode.INVALID_STACKS_ADDRESS)
     })
   })
 
