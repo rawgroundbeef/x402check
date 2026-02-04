@@ -69,7 +69,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 12-01-PLAN.md — Install c32check, add Stacks address validator, registry entries, and tests
+- [x] 12-01-PLAN.md — Install c32check, add Stacks address validator, registry entries, and tests
 
 **Requirements:**
 - MAN-05: Stacks chain address validation (SP/SM addresses, c32check encoding)
@@ -186,7 +186,7 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 | Manifest detection & validation | MAN-02 | Phase 13 | Pending |
 | Full bazaar extension validation | MAN-03 | Phase 13 | Pending |
 | Wild manifest compatibility | MAN-04 | Phase 11 | Complete |
-| Stacks chain address validation | MAN-05 | Phase 12 | Pending |
+| Stacks chain address validation | MAN-05 | Phase 12 | Complete |
 | CLI with auto-detection | MAN-06 | Phase 14 | Pending |
 | npm publish to registry | MAN-07 | Phase 16 | Pending |
 | Website manifest validation mode | MAN-08 | Phase 15 | Pending |
@@ -209,7 +209,7 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 | 9. Build Pipeline | v2.0 | 1/1 | Complete | 2026-01-29 |
 | 10. Website Integration | v2.0 | 2/2 | Complete | 2026-01-29 |
 | 11. Manifest Types & Detection | v3.0 | 2/2 | Complete | 2026-02-04 |
-| 12. Stacks Chain Support | v3.0 | 0/1 | Planned | -- |
+| 12. Stacks Chain Support | v3.0 | 1/1 | Complete | 2026-02-04 |
 | 13. Manifest Validation | v3.0 | -- | Pending | -- |
 | 14. CLI Manifest Mode | v3.0 | -- | Pending | -- |
 | 15. Website Manifest UI | v3.0 | -- | Pending | -- |
@@ -217,4 +217,4 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-02-04 -- Phase 12 planned (1 plan)*
+*Last updated: 2026-02-04 -- Phase 12 complete (Stacks Chain Support)*
