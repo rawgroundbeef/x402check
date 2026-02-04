@@ -44,5 +44,6 @@ export interface ManifestValidationResult {
   valid: boolean
   errors: ValidationIssue[] // manifest-level errors
   warnings: ValidationIssue[] // manifest-level warnings
-  endpointResults: Map<string, ValidationResult> // per-endpoint results
+  endpointResults: Record<string, ValidationResult> // per-endpoint results
+  normalized: ManifestConfig // normalized manifest for caller convenience
 }

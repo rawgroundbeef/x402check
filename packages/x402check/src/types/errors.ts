@@ -48,6 +48,15 @@ export const ErrorCode = {
   WILD_MANIFEST_NESTED_FORMAT: 'WILD_MANIFEST_NESTED_FORMAT',
   WILD_MANIFEST_NAME_PROMOTED: 'WILD_MANIFEST_NAME_PROMOTED',
 
+  // Manifest validation (Phase 13)
+  DUPLICATE_ENDPOINT_URL: 'DUPLICATE_ENDPOINT_URL',
+  MIXED_NETWORKS: 'MIXED_NETWORKS',
+  DUPLICATE_BAZAAR_ROUTE: 'DUPLICATE_BAZAAR_ROUTE',
+  BAZAAR_GET_WITH_BODY: 'BAZAAR_GET_WITH_BODY',
+  BAZAAR_GET_MISSING_QUERY_PARAMS: 'BAZAAR_GET_MISSING_QUERY_PARAMS',
+  BAZAAR_POST_WITH_QUERY_PARAMS: 'BAZAAR_POST_WITH_QUERY_PARAMS',
+  BAZAAR_POST_MISSING_BODY: 'BAZAAR_POST_MISSING_BODY',
+
   // Extension / schema warnings
   INVALID_BAZAAR_INFO: 'INVALID_BAZAAR_INFO',
   INVALID_BAZAAR_SCHEMA: 'INVALID_BAZAAR_SCHEMA',
@@ -113,6 +122,15 @@ export const ErrorMessages = {
   WILD_MANIFEST_ARRAY_FORMAT: 'Detected non-standard array format, normalized to endpoints collection',
   WILD_MANIFEST_NESTED_FORMAT: 'Detected non-standard nested service format, normalized to endpoints collection',
   WILD_MANIFEST_NAME_PROMOTED: 'Top-level name field promoted to service.name',
+
+  // Manifest validation (Phase 13)
+  DUPLICATE_ENDPOINT_URL: 'Multiple endpoints share the same URL',
+  MIXED_NETWORKS: 'Manifest contains both mainnet and testnet networks',
+  DUPLICATE_BAZAAR_ROUTE: 'Multiple endpoints share the same HTTP method + path',
+  BAZAAR_GET_WITH_BODY: 'GET requests cannot have body input shape',
+  BAZAAR_GET_MISSING_QUERY_PARAMS: 'GET requests should define queryParams input shape',
+  BAZAAR_POST_WITH_QUERY_PARAMS: 'POST/PUT/PATCH/DELETE requests should not use queryParams input shape',
+  BAZAAR_POST_MISSING_BODY: 'POST/PUT/PATCH/DELETE requests should define body input shape',
 
   // Extension / schema warnings
   INVALID_BAZAAR_INFO: 'extensions.bazaar.info must be an object with input and output',
