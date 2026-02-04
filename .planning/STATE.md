@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-Phase: 11 - Manifest Types & Detection (complete)
-Plan: 02 of 02 complete
-Status: Phase 11 verified (12/12 must-haves), ready for next phase
-Progress: [█.........] 1/6 v3.0 phases
-Last activity: 2026-02-04 -- Phase 11 executed and verified
+Phase: 12 - Stacks Chain Support (complete)
+Plan: 01 of 01 complete
+Status: Phase 12 complete, Phase 13 (Manifest Validation) ready to start
+Progress: [██........] 2/6 v3.0 phases
+Last activity: 2026-02-04 -- Completed 12-01-PLAN.md (Stacks address validation)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17 (3 v1.0 + 12 v2.0 + 2 v3.0)
-- Average duration: 2.9 min
-- Total execution time: 0.83 hours
+- Total plans completed: 18 (3 v1.0 + 12 v2.0 + 3 v3.0)
+- Average duration: 3.0 min
+- Total execution time: 0.90 hours
 
 ## Accumulated Context
 
@@ -49,17 +49,24 @@ See PROJECT.md Key Decisions table for full list.
 - Financial data (amounts, addresses, networks) never modified during normalization
 - Collision handling with -2, -3 suffix ensures no endpoint ID data loss
 
+**Phase 12-01 decisions:**
+- c32check standalone package chosen over @stacks/transactions for minimal bundle overhead
+- Network-aware version byte validation required (SP/SM only valid on stacks:1, ST/SN only on stacks:2147483648)
+- Contract name suffixes stripped before validation (e.g., SP123.token → SP123)
+- Single INVALID_STACKS_ADDRESS code for format/checksum errors, separate STACKS_NETWORK_MISMATCH for network mismatches
+- Bundle size 58.19 KB (over 45KB target) accepted given 19.86 KB gzipped and comprehensive validation depth
+
 ### Pending Todos
 
 None.
 
 ### Blockers/Concerns
 
-None.
+**Bundle size trend:** IIFE bundle grew from ~31KB (pre-Stacks) to 58.19 KB (post-Stacks). Gzipped remains excellent (19.86 KB), but may need tree-shaking optimizations if adding more chains.
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Phase 11 complete and verified
+Last session: 2026-02-04 18:31 UTC
+Stopped at: Phase 12 complete (Stacks address validation)
 Resume file: None
-Next: `/gsd:plan-phase 12` (Stacks) or `/gsd:plan-phase 13` (Manifest Validation) -- 12 and 13 can run in parallel
+Next: `/gsd:plan-phase 13` (Manifest Validation) -- Phase 12 complete, ready for Phase 13
