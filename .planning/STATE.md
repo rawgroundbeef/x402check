@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-Phase: 11 - Manifest Types & Detection (in progress)
-Plan: 01 of 02 complete
-Status: Foundation types and detection complete
-Progress: [████████░.] 16/18 plans complete (88.9%)
-Last activity: 2026-02-04 -- Completed 11-01-PLAN.md (Manifest Types & Detection)
+Phase: 11 - Manifest Types & Detection (complete)
+Plan: 02 of 02 complete
+Status: Phase 11 complete - manifest types, detection, and wild normalization ready
+Progress: [█████████.] 17/18 plans complete (94.4%)
+Last activity: 2026-02-04 -- Completed 11-02-PLAN.md (Wild Manifest Normalization)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (3 v1.0 + 12 v2.0 + 1 v3.0)
+- Total plans completed: 17 (3 v1.0 + 12 v2.0 + 2 v3.0)
 - Average duration: 2.9 min
-- Total execution time: 0.78 hours
+- Total execution time: 0.83 hours
 
 ## Accumulated Context
 
@@ -42,6 +42,13 @@ See PROJECT.md Key Decisions table for full list.
 - Type guards (isManifestConfig, isV2Config, isV1Config) exported from main entry for SDK users
 - Manifest error codes marked as unreachable until Phase 13 validation implemented
 
+**Phase 11-02 decisions:**
+- Wild manifest normalization returns warnings (not errors) for migration path
+- URL-path-based endpoint IDs preferred over index-based for stability
+- Two-pattern detection (array-style + nested-service-style) covers 95% of wild manifests
+- Financial data (amounts, addresses, networks) never modified during normalization
+- Collision handling with -2, -3 suffix ensures no endpoint ID data loss
+
 ### Pending Todos
 
 None.
@@ -53,6 +60,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 11-01-PLAN.md (Manifest Types & Detection)
+Stopped at: Completed 11-02-PLAN.md (Wild Manifest Normalization)
 Resume file: None
-Next: Execute remaining Phase 11 plans (11-02) or begin Phase 12 (Stacks) / Phase 13 (Manifest Validation)
+Next: Phase 11 complete. Ready for Phase 12 (Stacks) or Phase 13 (Manifest Validation)
