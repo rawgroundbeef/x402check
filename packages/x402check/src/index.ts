@@ -8,7 +8,7 @@ export * from './types'
 export * from './registries'
 
 // Re-export detection (Phase 6 Plan 02)
-export { detect, normalize } from './detection'
+export { detect, normalize, isManifestConfig, isV2Config, isV1Config } from './detection'
 
 // Re-export crypto primitives (Phase 7 Plan 01)
 export * from './crypto'
