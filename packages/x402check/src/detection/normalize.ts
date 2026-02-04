@@ -33,6 +33,10 @@ export function normalize(input: string | object): NormalizedConfig | null {
   const format = detect(parsed as object)
 
   switch (format) {
+    case 'manifest':
+      // Manifests are collections, not single configs
+      // Use normalizeWildManifest() for wild manifest normalization
+      return null
     case 'v2':
       return normalizeV2(parsed as V2Config)
     case 'v1':

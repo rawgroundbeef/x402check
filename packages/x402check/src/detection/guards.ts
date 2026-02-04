@@ -2,7 +2,7 @@
  * Runtime type guards for config format detection
  */
 
-import type { V2Config, V1Config } from '../types'
+import type { V2Config, V1Config, ManifestConfig } from '../types'
 
 /**
  * Check if value is a non-null, non-array object
@@ -37,5 +37,27 @@ export function isV1Config(value: unknown): value is V1Config {
   if (!isRecord(value)) return false
   if (!hasAcceptsArray(value)) return false
   return 'x402Version' in value && value.x402Version === 1
+}
+
+/**
+ * Type guard for manifest config (collection of v2 endpoints)
+ * Checks for endpoints collection structure only -- deep validation happens in validateManifest()
+ * MUST be checked before isV2Config() since manifests may have x402Version: 2
+ */
+export function isManifestConfig(value: unknown): value is ManifestConfig {
+  if (!isRecord(value)) return false
+  if (!('endpoints' in value)) return false
+  if (!isRecord(value.endpoints)) return false
+
+  // Verify endpoint values look like v2 configs (structural, not deep)
+  // Empty endpoints ({}) is valid -- allows manifest initialization
+  const endpoints = value.endpoints as Record<string, unknown>
+  for (const key in endpoints) {
+    const endpoint = endpoints[key]
+    if (!isRecord(endpoint)) return false
+    if (!hasAcceptsArray(endpoint)) return false
+  }
+
+  return true
 }
 
