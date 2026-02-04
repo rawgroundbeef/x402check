@@ -99,6 +99,45 @@ describe('detect', () => {
       expect(detect('42')).toBe('unknown')
     })
   })
+
+  describe('manifest format', () => {
+    it('detects manifest with endpoints collection', () => {
+      expect(
+        detect({
+          endpoints: {
+            'api-weather': {
+              x402Version: 2,
+              accepts: [
+                { scheme: 'exact', network: 'eip155:8453', amount: '100', asset: '0xabc', payTo: '0xdef' },
+              ],
+              resource: { url: 'https://example.com/api/weather' },
+            },
+          },
+        })
+      ).toBe('manifest')
+    })
+
+    it('detects manifest before v2 even with x402Version: 2', () => {
+      expect(
+        detect({
+          x402Version: 2,
+          endpoints: {
+            'api-weather': {
+              x402Version: 2,
+              accepts: [
+                { scheme: 'exact', network: 'eip155:8453', amount: '100', asset: '0xabc', payTo: '0xdef' },
+              ],
+              resource: { url: 'https://example.com/api/weather' },
+            },
+          },
+        })
+      ).toBe('manifest')
+    })
+
+    it('detects empty manifest', () => {
+      expect(detect({ endpoints: {} })).toBe('manifest')
+    })
+  })
 })
 
 // ---- normalize() tests ----
