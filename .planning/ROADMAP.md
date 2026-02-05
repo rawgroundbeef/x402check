@@ -121,9 +121,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — CLI module extraction: args parsing, URL fetch with redirects, input detection
-- [ ] 14-02-PLAN.md — Manifest output formatting, CLI rewrite with manifest routing, flag composition
-- [ ] 14-03-PLAN.md — Manifest CLI test fixtures and comprehensive test coverage
+- [x] 14-01-PLAN.md — CLI module extraction: args parsing, URL fetch with redirects, input detection
+- [x] 14-02-PLAN.md — Manifest output formatting, CLI rewrite with manifest routing, flag composition
+- [x] 14-03-PLAN.md — Manifest CLI test fixtures and comprehensive test coverage
 
 **Requirements:**
 - MAN-06: CLI (`npx x402check <url-or-file>`) with auto-detection of single config vs manifest
@@ -200,7 +200,7 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 | Full bazaar extension validation | MAN-03 | Phase 13 | Complete |
 | Wild manifest compatibility | MAN-04 | Phase 11 | Complete |
 | Stacks chain address validation | MAN-05 | Phase 12 | Complete |
-| CLI with auto-detection | MAN-06 | Phase 14 | Pending |
+| CLI with auto-detection | MAN-06 | Phase 14 | Complete |
 | npm publish to registry | MAN-07 | Phase 16 | Pending |
 | Website manifest validation mode | MAN-08 | Phase 15 | Pending |
 | `validateManifest()` SDK export | MAN-09 | Phase 13 | Complete |
@@ -224,10 +224,10 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 | 11. Manifest Types & Detection | v3.0 | 2/2 | Complete | 2026-02-04 |
 | 12. Stacks Chain Support | v3.0 | 1/1 | Complete | 2026-02-04 |
 | 13. Manifest Validation | v3.0 | 2/2 | Complete | 2026-02-04 |
-| 14. CLI Manifest Mode | v3.0 | 0/3 | Planned | -- |
+| 14. CLI Manifest Mode | v3.0 | 3/3 | Complete | 2026-02-05 |
 | 15. Website Manifest UI | v3.0 | -- | Pending | -- |
 | 16. Build & Publish | v3.0 | -- | Pending | -- |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-02-04 -- Phase 14 planned (CLI Manifest Mode, 3 plans)*
+*Last updated: 2026-02-05 -- Phase 14 complete (CLI Manifest Mode, 3/3 plans, verified)*
