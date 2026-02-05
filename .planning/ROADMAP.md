@@ -118,6 +118,13 @@ Plans:
 
 **Dependencies:** Phase 13 (manifest validation orchestrator)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — CLI module extraction: args parsing, URL fetch with redirects, input detection
+- [ ] 14-02-PLAN.md — Manifest output formatting, CLI rewrite with manifest routing, flag composition
+- [ ] 14-03-PLAN.md — Manifest CLI test fixtures and comprehensive test coverage
+
 **Requirements:**
 - MAN-06: CLI (`npx x402check <url-or-file>`) with auto-detection of single config vs manifest
 
@@ -217,10 +224,10 @@ Phase 12 (Stacks)  ─────────────┘ (parallel with 13)
 | 11. Manifest Types & Detection | v3.0 | 2/2 | Complete | 2026-02-04 |
 | 12. Stacks Chain Support | v3.0 | 1/1 | Complete | 2026-02-04 |
 | 13. Manifest Validation | v3.0 | 2/2 | Complete | 2026-02-04 |
-| 14. CLI Manifest Mode | v3.0 | -- | Pending | -- |
+| 14. CLI Manifest Mode | v3.0 | 0/3 | Planned | -- |
 | 15. Website Manifest UI | v3.0 | -- | Pending | -- |
 | 16. Build & Publish | v3.0 | -- | Pending | -- |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-02-04 -- Phase 13 complete (Manifest Validation)*
+*Last updated: 2026-02-04 -- Phase 14 planned (CLI Manifest Mode, 3 plans)*
