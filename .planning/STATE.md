@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-Phase: 14 - CLI Manifest Mode (in progress)
-Plan: 01 of 02 complete
-Status: Phase 14 in progress
-Progress: [████▌.....] 4.5/6 v3.0 phases
-Last activity: 2026-02-04 -- Completed 14-01-PLAN.md (CLI infrastructure modules)
+Phase: 14 - CLI Manifest Mode (complete)
+Plan: 02 of 02 complete
+Status: Phase 14 complete
+Progress: [█████.....] 5/6 v3.0 phases
+Last activity: 2026-02-05 -- Completed 14-02-PLAN.md (CLI manifest routing and formatting)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21 (3 v1.0 + 12 v2.0 + 6 v3.0)
-- Average duration: 3.0 min
-- Total execution time: 1.03 hours
+- Total plans completed: 22 (3 v1.0 + 12 v2.0 + 7 v3.0)
+- Average duration: 3.1 min
+- Total execution time: 1.08 hours
 
 ## Accumulated Context
 
@@ -75,17 +75,23 @@ See PROJECT.md Key Decisions table for full list.
 - Manual redirect tracking with configurable limits for better control and error handling
 - Manifest auto-detection in resolveInput() with wild manifest normalization support
 
+**Phase 14-02 decisions:**
+- Apply strict mode post-validation for manifests (validateManifest doesn't accept options)
+- Manifest exit code based on majority pass/fail (not single endpoint failure)
+- Detection announcements printed before results for user clarity
+- cli-table3 bundled with CLI binary (216 KB bundle, acceptable for standalone)
+
 ### Pending Todos
 
 None.
 
 ### Blockers/Concerns
 
-**Bundle size trend:** IIFE bundle grew from ~31KB (pre-Stacks) to 58.19 KB (post-Stacks) to 62.59 KB (post-manifest validation). Gzipped remains good (21.14 KB), but may need tree-shaking optimizations if adding more features. Growth is acceptable given comprehensive manifest validation capability.
+**Bundle size trend:** IIFE bundle grew from ~31KB (pre-Stacks) to 58.19 KB (post-Stacks) to 62.59 KB (post-manifest validation). CLI bundle is 216 KB (bundled with cli-table3). Gzipped sizes remain good (21.14 KB IIFE, 57.68 KB CLI). Growth is acceptable given comprehensive manifest validation capability and standalone CLI with no runtime dependencies.
 
 ## Session Continuity
 
-Last session: 2026-02-04 21:55 UTC
-Stopped at: Completed 14-01-PLAN.md (CLI infrastructure modules: args, fetch, detect)
+Last session: 2026-02-05 03:03 UTC
+Stopped at: Completed Phase 14 (CLI Manifest Mode)
 Resume file: None
-Next: Phase 14-02 (CLI main flow rewrite with manifest support) or Phase 15 (Website Integration). Critical path continues through 14 → 16.
+Next: Phase 15 (Website Integration) or Phase 16 (Final v3.0 Release). Critical path continues through 16.
