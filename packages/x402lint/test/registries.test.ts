@@ -36,6 +36,8 @@ describe('network registry', () => {
     expect(isKnownNetwork('eip155:84532')).toBe(true) // Base Sepolia
     expect(isKnownNetwork('eip155:43114')).toBe(true) // Avalanche
     expect(isKnownNetwork('eip155:43113')).toBe(true) // Avalanche Fuji
+    expect(isKnownNetwork('eip155:723487')).toBe(true) // Radius Network
+    expect(isKnownNetwork('eip155:72344')).toBe(true) // Radius Testnet
     expect(isKnownNetwork('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toBe(true)
     expect(isKnownNetwork('stellar:pubnet')).toBe(true)
   })
@@ -62,6 +64,8 @@ describe('network registry', () => {
 describe('simple name mapping', () => {
   it('maps simple names to CAIP-2', () => {
     expect(getCanonicalNetwork('base')).toBe('eip155:8453')
+    expect(getCanonicalNetwork('radius')).toBe('eip155:723487')
+    expect(getCanonicalNetwork('radius-testnet')).toBe('eip155:72344')
     expect(getCanonicalNetwork('solana')).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')
     expect(getCanonicalNetwork('stellar')).toBe('stellar:pubnet')
   })
@@ -91,6 +95,19 @@ describe('asset registry', () => {
         'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
         'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       ),
+    ).toBe(true)
+  })
+
+  it('finds SBC on Radius mainnet and testnet', () => {
+    expect(
+      getAssetInfo('eip155:723487', '0x33ad9e4BD16B69B5BFdED37D8B5D9fF9aba014Fb'),
+    ).toMatchObject({
+      symbol: 'SBC',
+      name: 'Stable Coin',
+      decimals: 6,
+    })
+    expect(
+      isKnownAsset('eip155:72344', '0x33ad9e4BD16B69B5BFdED37D8B5D9fF9aba014Fb'),
     ).toBe(true)
   })
 

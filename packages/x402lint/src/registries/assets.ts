@@ -40,6 +40,24 @@ export const KNOWN_ASSETS = {
     },
   },
 
+  // Radius Network (eip155:723487)
+  'eip155:723487': {
+    '0x33ad9e4bd16b69b5bfded37d8b5d9ff9aba014fb': {
+      symbol: 'SBC',
+      name: 'Stable Coin',
+      decimals: 6,
+    },
+  },
+
+  // Radius Testnet (eip155:72344)
+  'eip155:72344': {
+    '0x33ad9e4bd16b69b5bfded37d8b5d9ff9aba014fb': {
+      symbol: 'SBC',
+      name: 'Stable Coin',
+      decimals: 6,
+    },
+  },
+
   // Solana Mainnet (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp)
   'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': {
     EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: {

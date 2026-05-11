@@ -22,6 +22,8 @@ export const KNOWN_NETWORKS = {
   'eip155:84532': { name: 'Base Sepolia', type: 'evm', testnet: true },
   'eip155:43114': { name: 'Avalanche C-Chain', type: 'evm', testnet: false },
   'eip155:43113': { name: 'Avalanche Fuji', type: 'evm', testnet: true },
+  'eip155:723487': { name: 'Radius Network', type: 'evm', testnet: false },
+  'eip155:72344': { name: 'Radius Testnet', type: 'evm', testnet: true },
 
   // Solana networks
   'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': {

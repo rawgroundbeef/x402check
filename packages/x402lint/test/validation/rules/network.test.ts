@@ -51,6 +51,14 @@ describe('validateNetwork', () => {
     expect(issues[0]!.fix).toContain('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')
   })
 
+  test('invalid CAIP-2 with simple name "radius" returns fix suggestion', () => {
+    const entry = makeEntry({ network: 'radius' })
+    const issues = validateNetwork(entry, 'accepts[0]')
+    expect(issues).toHaveLength(1)
+    expect(issues[0]!.code).toBe(ErrorCode.INVALID_NETWORK_FORMAT)
+    expect(issues[0]!.fix).toContain('eip155:723487')
+  })
+
   test('invalid CAIP-2 with unknown simple name returns error without fix', () => {
     const entry = makeEntry({ network: 'unknownchain' })
     const issues = validateNetwork(entry, 'accepts[0]')
@@ -79,6 +87,15 @@ describe('validateAsset', () => {
     expect(issues).toHaveLength(1)
     expect(issues[0]!.code).toBe(ErrorCode.UNKNOWN_ASSET)
     expect(issues[0]!.severity).toBe('warning')
+  })
+
+  test('known Radius asset returns no issues', () => {
+    const entry = makeEntry({
+      network: 'eip155:723487',
+      asset: '0x33ad9e4BD16B69B5BFdED37D8B5D9fF9aba014Fb',
+    })
+    const issues = validateAsset(entry, 'accepts[0]')
+    expect(issues).toHaveLength(0)
   })
 
   test('missing asset returns no issues (handled by fields)', () => {
